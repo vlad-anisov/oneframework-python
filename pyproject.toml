@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oneframework"
+version = "0.1.0"
+description = "Write local-first Web/PWA/Android apps in declarative Python"
+requires-python = ">=3.10"
+# Пусто, и это не упущение. Привязка печатает пакет объявления -- JSON; всё
+# прочее делает ядро на JavaScript, и питону для этого нужен только `node`,
+# которого через pip не поставить.
+#
+# Здесь стоял `wasmtime>=27`: ядро семантики было модулем WASM, и без рантайма
+# его было не исполнить. Модули удалены 16.08.2026, а зависимость осталась --
+# каждый ставивший привязку тянул рантайм WASM ни за чем. Убрана 21.08.2026,
+# когда её отсутствие подтвердилось разбором: не ввозит никто.
+dependencies = []
+
+[project.optional-dependencies]
+# Обмен между устройствами живёт в расширении session самой SQLite. На
+# устройстве это делает ядро (`src/runtime/sync.js`) своей сборкой SQLite;
+# питону APSW нужен только проверкам -- одной, где сверяется текст отказа.
+sync = ["apsw>=3.47"]
+# Подпись издателя: модуль логики -- исполняемый код, и он едет по сети. Своей
+# криптографии здесь нет и не будет. Приложение без ключа работает целиком: не
+# работает только подпись, и она говорит об этом вслух.
+sign = ["cryptography>=41"]
+dev = ["pytest>=8", "playwright>=1.40", "apsw>=3.47", "cryptography>=41"]
+
+[project.scripts]
+oneframework = "oneframework.cli.main:main"
+
+[tool.setuptools.packages.find]
+include = ["oneframework*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
