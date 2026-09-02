@@ -4,9 +4,7 @@
     oneframework serve          examples/todo/app.py     # exchange point + built client
     oneframework build web      examples/todo/app.py     # production PWA
     oneframework build android  examples/todo/app.py     # PWA -> Capacitor -> APK
-    oneframework build ios      examples/todo/app.py     # PWA -> Capacitor -> .app
     oneframework check          examples/todo/app.py     # validate the DSL only
-    oneframework inspect        examples/todo/app.py     # look at it without a browser
 
 Builders live in ``oneframework/cli/builders`` and are selected by name: a new target
 is a new module plus one entry in ``BUILDERS`` -- no changes to the CLI itself.
@@ -24,17 +22,13 @@ from pathlib import Path
 
 from .. import core
 from ..errors import OneFrameworkError
-from . import assets, inspect, sources
+from . import assets, sources
 from .builders import android as android_builder
-from .builders import ios as ios_builder
 from .builders import web as web_builder
 
 BUILDERS = {
     "web": lambda app_file, app, args: web_builder.build(app_file, app),
     "android": lambda app_file, app, args: android_builder.build(
-        app_file, app, install=args.install
-    ),
-    "ios": lambda app_file, app, args: ios_builder.build(
         app_file, app, install=args.install
     ),
 }
@@ -239,7 +233,7 @@ def main(argv=None):
     p_build.add_argument("app", help="path to your app.py")
     p_build.add_argument(
         "--install", action="store_true",
-        help="android/ios: install and launch on a running device/emulator",
+        help="android: install and launch on a running device/emulator",
     )
     p_build.set_defaults(func=cmd_build)
 
@@ -272,7 +266,6 @@ def main(argv=None):
     p_check.add_argument("app", help="path to your app.py")
     p_check.set_defaults(func=cmd_check)
 
-    inspect.add_parser(sub)
 
     args = parser.parse_args(argv)
     return args.func(args)
