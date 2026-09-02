@@ -229,13 +229,9 @@ class Model(metaclass=ModelMeta):
         """Stored relations, i.e. the ones that own a foreign key column."""
         return [f for f in cls._fields.values() if isinstance(f, Many2one)]
 
-    #: ``Model.all()`` и ``Model.get()`` жили здесь до 21.08.2026. Они читали
-    #: **через живой рантайм**, чтобы экран сам перерисовывался при правке
-    #: таблицы, -- и это работало, только пока рантайм был питоновским и стоял
-    #: в том же процессе. Их дорога -- метод ``ui``, исполняемый при отрисовке;
-    #: с переходом видов в документы отрисовывает их устройство, и ``ui`` там
-    #: не исполняется вовсе. Цикл ``for board in Board.all()`` заменён на
-    #: ``Repeat(Board, Tab(...))`` ещё раньше, и ни один пример их не звал.
+    #: ``Model.all()`` и ``Model.get()`` читали через живой питоновский
+    #: рантайм. Его нет: виды едут документами, ``ui`` на устройстве не
+    #: исполняется. Цикл по записям пишется ``Repeat(Board, Tab(...))``.
     @classmethod
     def display_name(cls, row: dict) -> str:
         df = cls.display_field()

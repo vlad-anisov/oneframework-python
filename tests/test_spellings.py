@@ -95,7 +95,7 @@ def test_the_list_above_covers_every_node_the_printer_knows():
     молча мимо выборки, как проехали пять предыдущих.
 
     Кто у печатника ветка, спрашивается у :func:`~oneframework.model.exprschema
-    .branch_classes` -- там же, откуда это узнаёт грамматика: два разбора
+.branch_classes` -- там же, откуда это узнаёт грамматика: два разбора
     одного и того же кода разошлись бы так же тихо, как два его описания.
     """
     from oneframework.model.exprschema import branch_classes

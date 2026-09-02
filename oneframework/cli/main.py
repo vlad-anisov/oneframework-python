@@ -3,7 +3,6 @@
     oneframework dev            examples/todo/app.py     # web development server
     oneframework serve          examples/todo/app.py     # exchange point + built client
     oneframework build web      examples/todo/app.py     # production PWA
-    oneframework build android  examples/todo/app.py     # PWA -> Capacitor -> APK
     oneframework check          examples/todo/app.py     # validate the DSL only
 
 Builders live in ``oneframework/cli/builders`` and are selected by name: a new target
@@ -23,24 +22,19 @@ from pathlib import Path
 from .. import core
 from ..errors import OneFrameworkError
 from . import assets, sources
-from .builders import android as android_builder
 from .builders import web as web_builder
 
 BUILDERS = {
     "web": lambda app_file, app, args: web_builder.build(app_file, app),
-    "android": lambda app_file, app, args: android_builder.build(
-        app_file, app, install=args.install
-    ),
 }
 
 
 def load_app(app_file: Path):
     """Приложение из файла -- на любом языке, какой умеет :mod:`.sources`.
 
-    Раньше здесь стоял ``importlib``, и это была единственная причина, по
-    которой приложение обязано было быть питоновским. Теперь выбор дороги
-    делается по расширению: ``.py`` -- импорт, ``.mjs`` -- запуск ``node``,
-    ``.kt`` -- сборка и запуск, ``.json`` -- готовый пакет объявления.
+    Дорога выбирается по расширению: ``.py`` -- импорт, ``.mjs`` -- запуск
+    ``node``, ``.kt`` -- сборка и запуск, ``.json`` -- готовый пакет. Один
+    только ``importlib`` здесь и делал приложение обязательно питоновским.
     """
     return sources.load(app_file)
 
@@ -53,12 +47,9 @@ def cmd_check(args):
     строка списка, привязанная к чужой модели, -- всё это вылезает при сборке
     дерева. Она здесь и делается.
 
-    Собирается именно **документ**, а не кадр. До 21.08.2026 здесь поднимался
-    питоновский рантайм и каждый вид рисовался на живом кадре. Так проверялось
-    больше, чем нужно, и меньше, чем следует: вид, который читает ``self``,
-    кадр принимал -- а до устройства такой вид не доезжает вовсе, потому что
-    туда едут документы. Сборка документа отвечает ровно на тот вопрос, от
-    которого зависит, поедет ли приложение.
+    Собирается именно **документ**, а не кадр. Кадр проверял бы больше, чем
+    нужно, и меньше, чем следует: вид, читающий ``self``, кадр принимает, а до
+    устройства такой вид не доезжает вовсе -- туда едут документы.
     """
     from ..declaration import Bundle, DeclarationError, declare
     from ..model.defs import SKIPPED
@@ -71,11 +62,9 @@ def cmd_check(args):
         return _check_bundle(app)
 
     # Печать пакета -- и есть исполнение видов: `declare` строит каждый
-    # документ и записывает в `SKIPPED` тот, что остался программой. Раньше
-    # здесь стоял свой обход с `build_ui`, и он проверял **не то**, что поедет:
-    # приложение проходило проверку, а потом отвергалось при сборке пакета --
-    # корневого вида не оказывалось в списке. Теперь проверка спрашивает ровно
-    # то, от чего зависит выкладка.
+    # документ и записывает в `SKIPPED` тот, что остался программой. Свой обход
+    # здесь проверял бы **не то**, что поедет: приложение прошло бы проверку и
+    # отвалилось при сборке пакета.
     SKIPPED.clear()
     try:
         пакет = Bundle(declare(app))
@@ -143,13 +132,10 @@ def cmd_serve(args):
 
     data = Path(args.data).resolve()
     data.mkdir(parents=True, exist_ok=True)
-    # Сервер обмена -- на JavaScript (`libs/js/src/http.mjs`). Питоновский убран
-    # 20.08.2026: он был второй реализацией всего, что касается данных, а
-    # браузерная половина и так работает под node -- ей не пришлось писать
-    # заново ни обмен, ни хранилище, ни часы.
-    #
-    # Команда осталась одной: она по-прежнему собирает клиент, заводит каталог
-    # и поднимает домен целиком. Сменился только тот, кто отвечает.
+    # Сервер обмена -- на JavaScript (`libs/js/src/http.mjs`): питоновский был
+    # бы второй реализацией всего, что касается данных, а браузерная половина и
+    # так работает под node. Команда одна: собрать клиент, завести каталог,
+    # поднять домен целиком.
     запуск = core.файл("src", "cli-serve.mjs")
     окружение = dict(os.environ)
     окружение.update({
@@ -203,10 +189,8 @@ def main(argv=None):
     p_build = sub.add_parser("build", help="produce a production build")
     p_build.add_argument("target", choices=sorted(BUILDERS), help="build target")
     p_build.add_argument("app", help="path to your app.py")
-    p_build.add_argument(
-        "--install", action="store_true",
-        help="android: install and launch on a running device/emulator",
-    )
+    #: APK собирает ядро: `npx oneframework build android app.mjs [--install]`.
+    #: Питон в той сборке не участвует ни строкой.
     p_build.set_defaults(func=cmd_build)
 
     p_serve = sub.add_parser(

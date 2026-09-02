@@ -290,7 +290,7 @@ function canon(value) {
   if (Array.isArray(value)) return "[" + value.map(canon).join("\\x1f") + "]";
   if (typeof value === "object") {
     return "{" + Object.keys(value).sort()
-      .map((k) => k + "\\x1e" + canon(value[k])).join("\\x1f") + "}";
+.map((k) => k + "\\x1e" + canon(value[k])).join("\\x1f") + "}";
   }
   return "?" + typeof value;
 }
@@ -352,7 +352,7 @@ function stable(value) {
   if (Array.isArray(value)) return "[" + value.map(stable).join(",") + "]";
   if (value && typeof value === "object") {
     return "{" + Object.keys(value).sort()
-      .map((k) => JSON.stringify(k) + ":" + stable(value[k])).join(",") + "}";
+.map((k) => JSON.stringify(k) + ":" + stable(value[k])).join(",") + "}";
   }
   return JSON.stringify(value);
 }
@@ -384,8 +384,7 @@ def test_javascript_converts_exactly_like_python(tmp_path):
 # --------------------------------------------------------------------------
 # Здесь стояли две проверки через **третью** реализацию -- модуль-базу на Rust:
 # он приводил значения полей тем же кодом, что и запись в SQLite внутри WASM.
-# Модуль удалён вместе со всем WASM (16.08.2026), и правило теперь сторожат две
-# стороны, а не три. Потеря честная: третья сторона ловила бы расхождение,
+# Потеря честная: третья сторона ловила бы расхождение,
 # которого две не видят, -- но её содержание стоило мегабайта в браузере.
 
 def test_every_field_type_is_covered():

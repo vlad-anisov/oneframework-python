@@ -285,14 +285,14 @@ def test_a_document_that_breaks_the_contract_is_refused():
     то, *что* прислано. Узел, которого отрисовка не знает, на устройстве
     выглядит пустым местом вместо части экрана -- и молчит.
 
-    Нашёл разбор со стороны 20.08.2026.
+    Нашёл разбор со стороны.
     """
     from oneframework.model.defs import view_defs
     from oneframework.ui.nodes import Node
     from oneframework.ui.view import View
 
     #: Вид, чей документ несёт узел, которого договор не знает. Проверяется
-    #: **выкладка**, а не запись: рубеж переехал туда 21.08.2026 вместе с ней.
+    #: **выкладка**, а не запись: рубеж переехал туда вместе с ней.
     class Чужой(View):
         def ui(self, record):
             return ()
