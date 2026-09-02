@@ -8,6 +8,12 @@ Three jobs, none of which depend on the target platform:
 * generate the PWA manifest and icons if the project has none.
 """
 
+#: Здесь жили работы, которые делает теперь ядро на JavaScript
+#: (`libs/js/src/build/assets.mjs`): `build_database`, `build_manifest`,
+#: `sync_address`, `_png`, `_icon_pixels`, `write_pwa_assets`. Переезд шёл под
+#: двусторонней сверкой -- байт в байт, включая значки; сверять теперь не с чем,
+#: и правила записаны прямо в `tests/js/assets.test.mjs`.
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -40,18 +46,6 @@ def project_root() -> Path:
         f"Ядро найдено ({ядро}), но ни в нём, ни выше нет web/index.html "
         "рядом с package.json.\nПохоже, это привязка, а не ядро, либо ядро "
         "другой версии.")
-
-
-
-
-
-
-#: Здесь жили работы, которые делает теперь ядро на JavaScript
-#: (`libs/js/src/build/assets.mjs`): `build_database`, `build_manifest`,
-#: `sync_address`, `_png`, `_icon_pixels`, `write_pwa_assets`. Переезд шёл под
-#: двусторонней сверкой (`tests/test_js_assets.py`) -- байт в байт, включая
-#: значки; сверять теперь не с чем, и правила записаны там прямо.
-
 
 def write_app_db(app, seed_fn, out: Path, поверх: bool = False):
     """План от питона -> файл SQLite, написанный сборщиком на node.
@@ -94,48 +88,9 @@ def write_app_db(app, seed_fn, out: Path, поверх: bool = False):
             f"Сборщик базы отказал: {ответ['error']}\n{ответ.get('stack', '')}")
     return out
 
-
-
-
-
-
-#: Здесь жили работы, которые делает теперь ядро на JavaScript
-#: (`libs/js/src/build/assets.mjs`): `build_database`, `build_manifest`,
-#: `sync_address`, `_png`, `_icon_pixels`, `write_pwa_assets`. Переезд шёл под
-#: двусторонней сверкой (`tests/test_js_assets.py`) -- байт в байт, включая
-#: значки; сверять теперь не с чем, и правила записаны там прямо.
-
-
-#: Здесь жили работы, которые делает теперь ядро на JavaScript
-#: (`libs/js/src/build/assets.mjs`): `build_database`, `build_manifest`,
-#: `sync_address`, `_png`, `_icon_pixels`, `write_pwa_assets`. Переезд шёл под
-#: двусторонней сверкой (`tests/test_js_assets.py`) -- байт в байт, включая
-#: значки; сверять теперь не с чем, и правила записаны там прямо.
-
-
 # --------------------------------------------------------------------------
 # PWA manifest + icons
 # --------------------------------------------------------------------------
-#: Здесь жили работы, которые делает теперь ядро на JavaScript
-#: (`libs/js/src/build/assets.mjs`): `build_database`, `build_manifest`,
-#: `sync_address`, `_png`, `_icon_pixels`, `write_pwa_assets`. Переезд шёл под
-#: двусторонней сверкой (`tests/test_js_assets.py`) -- байт в байт, включая
-#: значки; сверять теперь не с чем, и правила записаны там прямо.
-
-
-#: Здесь жили работы, которые делает теперь ядро на JavaScript
-#: (`libs/js/src/build/assets.mjs`): `build_database`, `build_manifest`,
-#: `sync_address`, `_png`, `_icon_pixels`, `write_pwa_assets`. Переезд шёл под
-#: двусторонней сверкой (`tests/test_js_assets.py`) -- байт в байт, включая
-#: значки; сверять теперь не с чем, и правила записаны там прямо.
-
-
-#: Здесь жили работы, которые делает теперь ядро на JavaScript
-#: (`libs/js/src/build/assets.mjs`): `build_database`, `build_manifest`,
-#: `sync_address`, `_png`, `_icon_pixels`, `write_pwa_assets`. Переезд шёл под
-#: двусторонней сверкой (`tests/test_js_assets.py`) -- байт в байт, включая
-#: значки; сверять теперь не с чем, и правила записаны там прямо.
-
 
 #: Здесь жили три работы, которые делает теперь кто-то другой:
 #:

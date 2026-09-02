@@ -23,11 +23,12 @@ from .. import python_runtime
 from ..assets import project_root
 
 #: files that never belong in the service worker precache list
-#: Здесь жили `write_build_config`, `inject_service_worker`, `SKIP_PRECACHE` и
-#: `_npx` -- всё это делает теперь ядро на JavaScript
-#: (`libs/js/src/build/web.mjs`). Переезд шёл под двусторонней сверкой
-#: (`tests/test_js_web_build.py`): порядок обхода `dist/` она и поймала --
-#: питон сортирует пути по частям, а не по строке.
+#: Здесь жили `write_build_config`, `inject_service_worker`,
+#: `SKIP_PRECACHE` и `_npx` -- всё это делает теперь ядро на JavaScript
+#: (`libs/js/src/build/web.mjs`). Переезд шёл под двусторонней сверкой:
+#: порядок обхода `dist/` она и поймала -- питон сортирует пути по
+#: частям, а не по строке. Правила записаны прямо в
+#: `tests/js/web-build.test.mjs`.
 
 
 def prepare(app_file: Path, app) -> Path:
@@ -93,7 +94,7 @@ def _позвать_ядро(root: Path, app_file: Path, app, аргументы
 #: Делает это теперь ядро (`libs/js/src/build/web.mjs`), и правильно: просит
 #: модуль **пакет объявления**, а печатает пакет кто угодно. Пока шаг жил тут,
 #: человек с приложением на Kotlin ставил питон, чтобы скомпилировать свой же
-#: Kotlin. Порт шёл под сверкой байтов модуля (`tests/test_js_teavm.py`).
+#: Kotlin. Порт шёл под сверкой байтов модуля с питоновской половиной.
 
 
 def _seed_of(app_file: Path):
@@ -115,14 +116,6 @@ def _seed_of(app_file: Path):
     except ModuleNotFoundError:
         return None
 
-
-#: Здесь жили `write_build_config`, `inject_service_worker`, `SKIP_PRECACHE` и
-#: `_npx` -- всё это делает теперь ядро на JavaScript
-#: (`libs/js/src/build/web.mjs`). Переезд шёл под двусторонней сверкой
-#: (`tests/test_js_web_build.py`): порядок обхода `dist/` она и поймала --
-#: питон сортирует пути по частям, а не по строке.
-
-
 def dev(app_file: Path, app, port: int = 5173, open_browser: bool = False):
     root = prepare(app_file, app)
     аргументы = ["--dev", "--port", str(port)] + (["--open"] if open_browser else [])
@@ -133,10 +126,3 @@ def build(app_file: Path, app) -> Path:
     root = prepare(app_file, app)
     _позвать_ядро(root, app_file, app, [])
     return root / "dist"
-
-
-#: Здесь жили `write_build_config`, `inject_service_worker`, `SKIP_PRECACHE` и
-#: `_npx` -- всё это делает теперь ядро на JavaScript
-#: (`libs/js/src/build/web.mjs`). Переезд шёл под двусторонней сверкой
-#: (`tests/test_js_web_build.py`): порядок обхода `dist/` она и поймала --
-#: питон сортирует пути по частям, а не по строке.
