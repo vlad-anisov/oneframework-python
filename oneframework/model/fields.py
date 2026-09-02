@@ -53,7 +53,19 @@ def register_widget(field_type, name):
 
 
 class Field(Ref):
-    """Base field. Subclasses declare their sql/semantic type and widgets."""
+    """Base field. Подкласс называет свой ``ftype``; остальное берётся из таблицы.
+
+    Колонка, виджеты и умолчания **не пишутся здесь**. Они лежат в
+    ``protocol/field-types.json`` -- том же файле, который читают привязки на
+    JavaScript и Kotlin, -- и подтягиваются в класс при его объявлении.
+
+    До 02.09.2026 было наоборот: питон описывал типы своими классами, а
+    ``protocol.py`` порождал из них таблицу интроспекцией. Значит завести тип
+    поля можно было только правкой питона, а два других языка оставались
+    читателями договора, который пишет третий. Ровно та асимметрия, которой у
+    равных привязок быть не должно: теперь источник -- данные, и все трое
+    читают их одинаково.
+    """
 
     #: semantic type exposed to the renderer
     ftype = "string"
@@ -73,6 +85,27 @@ class Field(Ref):
     #: string like any other, and counting it as content would mean no record
     #: is ever empty.
     system = False
+
+    def __init_subclass__(cls, **прочее):
+        super().__init_subclass__(**прочее)
+        # Свой `ftype` объявляют не все: `Text` -- это `String` с другими
+        # умолчаниями, и таблицу он берёт у родителя.
+        свой = cls.__dict__.get("ftype")
+        if свой is None:
+            return
+        from ..protocol import load
+
+        описание = load()["types"].get(свой)
+        if описание is None:
+            raise DslError(
+                f"{cls.__name__}: типа поля «{свой}» нет в protocol/field-types.json. "
+                "Тип объявляется там -- один раз на все языки; класс здесь только "
+                "называет его по имени."
+            )
+        cls.sql_type = описание["sql"]
+        cls.default_widget = описание["widget"]
+        cls.widgets = tuple(описание["widgets"])
+        cls.stored = bool(описание["stored"])
 
     __hash__ = object.__hash__
 
@@ -207,10 +240,6 @@ class Field(Ref):
 
 class String(Field):
     ftype = "string"
-    sql_type = "TEXT"
-    default_widget = "text"
-    widgets = ("text", "textarea", "title", "subtitle", "headline", "rich",
-               "email", "phone", "url", "password", "barcode")
 
     #: What the value *means*, which is what both platforms call it: the same
     #: idea as `UITextContentType` on iOS and `autofillHints` on Android. It
@@ -244,9 +273,6 @@ class String(Field):
 
 class Boolean(Field):
     ftype = "boolean"
-    sql_type = "INTEGER"
-    default_widget = "checkbox"
-    widgets = ("checkbox", "toggle")
     py_default = False
 
     def to_db(self, value):
@@ -261,9 +287,6 @@ class Boolean(Field):
 
 class Integer(Field):
     ftype = "integer"
-    sql_type = "INTEGER"
-    default_widget = "number"
-    widgets = ("number", "handle", "stepper", "range")
     py_default = 0
 
     def __init__(self, label=None, maximum=None, **kw):
@@ -280,9 +303,6 @@ class Integer(Field):
 
 class Color(Field):
     ftype = "color"
-    sql_type = "TEXT"
-    default_widget = "color"
-    widgets = ("color",)
 
     def to_db(self, value):
         if value is None:
@@ -297,9 +317,6 @@ class Datetime(Field):
     """ISO-8601 UTC timestamp, stored as TEXT so it sorts lexicographically."""
 
     ftype = "datetime"
-    sql_type = "TEXT"
-    default_widget = "datetime"
-    widgets = ("datetime", "text", "title")
 
     @staticmethod
     def now():
@@ -317,9 +334,6 @@ class Date(Field):
     """Calendar date, stored as ISO ``YYYY-MM-DD``."""
 
     ftype = "date"
-    sql_type = "TEXT"
-    default_widget = "calendar"
-    widgets = ("calendar", "text", "title")
 
     def to_db(self, value):
         if isinstance(value, _dt.datetime):
@@ -338,10 +352,6 @@ class Many2one(Field):
     """
 
     ftype = "many2one"
-    #: TEXT, because that is what a primary key is now -- see model/ids.py.
-    sql_type = "TEXT"
-    default_widget = "select"
-    widgets = ("select", "tag", "chips", "autocomplete", "inline")
 
     def __init__(self, comodel, label=None, required=False, default=None, help=None,
                  unique=False,
@@ -394,9 +404,6 @@ class Float(Field):
     """Real number. ``digits`` is (precision, scale) as in Odoo."""
 
     ftype = "float"
-    sql_type = "REAL"
-    default_widget = "number"
-    widgets = ("number", "unit", "range", "progress", "gauge")
     py_default = 0.0
 
     def __init__(self, label=None, digits=(16, 2), unit=None, **kw):
@@ -430,9 +437,6 @@ class Monetary(Float):
     """
 
     ftype = "monetary"
-    sql_type = "INTEGER"
-    default_widget = "monetary"
-    widgets = ("monetary", "number")
 
     def to_db(self, value):
         if value is None:
@@ -453,8 +457,6 @@ class Duration(Integer):
     """A span of time, stored as whole seconds."""
 
     ftype = "duration"
-    default_widget = "picker"
-    widgets = ("picker", "number", "stepper")
 
 
 # --------------------------------------------------------------------------
@@ -475,8 +477,6 @@ class Uuid(String):
     """
 
     ftype = "uuid"
-    default_widget = "text"
-    widgets = ("text", "title")
 
     def default(self):
         value = super().default()
@@ -492,9 +492,6 @@ class Json(Field):
     """
 
     ftype = "json"
-    sql_type = "TEXT"
-    default_widget = "textarea"
-    widgets = ("textarea", "text")
 
     def to_db(self, value):
         # ``sort_keys=True`` -- решение, а не украшение. Порядок ключей теряется
@@ -526,9 +523,6 @@ class Selection(Field):
     """
 
     ftype = "selection"
-    sql_type = "TEXT"
-    default_widget = "select"
-    widgets = ("select", "radio", "segmented", "badge", "chips", "picker", "pill")
 
     def __init__(self, selection, label=None, **kw):
         super().__init__(label=label, **kw)
@@ -549,9 +543,6 @@ class Time(Field):
     """Clock time, stored as ISO ``HH:MM``."""
 
     ftype = "time"
-    sql_type = "TEXT"
-    default_widget = "time"
-    widgets = ("time", "picker", "text", "title")
 
     def to_db(self, value):
         if isinstance(value, _dt.time):
@@ -568,9 +559,6 @@ class Binary(Field):
     """A file, stored as a data URI so it travels with the record."""
 
     ftype = "binary"
-    sql_type = "TEXT"
-    default_widget = "file"
-    widgets = ("file", "image", "browser")
 
     def __init__(self, label=None, accept=None, max_size=5_000_000, **kw):
         """``accept`` is the file dialog's filter -- and what made `Image` a
@@ -590,9 +578,6 @@ class GeoPoint(Field):
     """A latitude/longitude pair, stored as ``"lat,lon"``."""
 
     ftype = "geopoint"
-    sql_type = "TEXT"
-    default_widget = "location"
-    widgets = ("location", "text")
 
     def to_db(self, value):
         if value in (None, ""):
@@ -621,8 +606,6 @@ class One2one(Many2one):
     """
 
     ftype = "one2one"
-    default_widget = "select"
-    widgets = ("select", "tag", "autocomplete")
 
     def __init__(self, comodel, label=None, ondelete="cascade", **kw):
         super().__init__(comodel, label=label, unique=True, ondelete=ondelete, **kw)
@@ -636,10 +619,6 @@ class One2many(Field):
     """
 
     ftype = "one2many"
-    sql_type = None
-    stored = False
-    default_widget = "tags"
-    widgets = ("count", "tags")
 
     def __init__(self, comodel, inverse, label=None, **kw):
         super().__init__(label=label, **kw)
@@ -686,10 +665,6 @@ class Many2many(Field):
     """
 
     ftype = "many2many"
-    sql_type = None
-    stored = False
-    default_widget = "tags"
-    widgets = ("tags", "list", "chips", "count")
 
     def __init__(self, comodel, label=None, relation=None, **kw):
         super().__init__(label=label, **kw)

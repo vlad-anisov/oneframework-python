@@ -134,11 +134,23 @@ def test_vendored_type_tables_match_the_protocol():
 
 def test_kotlin_type_table_source_matches_the_protocol():
     """Таблица типов у Kotlin едет исходником -- он тоже обязан совпасть."""
-    from oneframework.cli import kotlin_table
+    import subprocess as _sp
 
-    assert kotlin_table.OUT.read_text(encoding="utf-8") == kotlin_table.source(), (
+    #: Порождает ядро (`libs/js/src/build/kotlin-table.mjs`): таблица лежит
+    #: данными, и делать из неё исходник для третьего языка -- работа ядра, а
+    #: не питоновской привязки. Пока это делал питон, поправить таблицу и
+    #: пересобрать Kotlin без питона было нельзя.
+    вышло = _sp.run(
+        ["node", "-e",
+         "import('./libs/js/src/build/kotlin-table.mjs')"
+         ".then((m) => process.stdout.write(m.исходник()))"],
+        capture_output=True, text=True, encoding="utf-8", cwd=str(ROOT))
+    assert вышло.returncode == 0, вышло.stderr
+    ФАЙЛ = ROOT / "libs" / "kotlin" / "src" / "main" / "kotlin" / "oneframework" / "FieldTypes.kt"
+
+    assert ФАЙЛ.read_text(encoding="utf-8") == вышло.stdout, (
         "libs/kotlin/.../FieldTypes.kt отстал от protocol/field-types.json. "
-        "Пересоберите: python3 -m oneframework.cli.kotlin_table"
+        "Пересоберите: node libs/js/src/build/kotlin-table.mjs"
     )
 
 

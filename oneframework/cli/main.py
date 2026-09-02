@@ -169,34 +169,6 @@ def cmd_serve(args):
     return 0
 
 
-def cmd_keygen(args):
-    """Пара ключей издателя. Приватный -- файлом, публичный -- на экран.
-
-    Отдельной командой, а не втихую при первой сборке: ключ, созданный сам
-    собой, лежит непонятно где и заменяется непонятно на что. Здесь видно, куда
-    он лёг, и сразу сказано, что дальше с ним делать.
-    """
-    from .. import keys
-
-    path = Path(args.path).resolve()
-    if path.exists() and not args.force:
-        raise SystemExit(
-            f"{path} уже существует. Перезаписать -- --force, но учтите: старый "
-            "ключ восстановить нельзя, а всё подписанное им перестанет "
-            "приниматься устройствами, которые знают только его."
-        )
-    public = keys.write_private(keys.generate(), path)
-    print(f"Приватный ключ: {path}  (права 0600)")
-    print(f"Публичный ключ: {public}")
-    print()
-    print("Держите файл вне репозитория и назовите его сборке:")
-    print(f"    export {keys.ENV_PRIVATE_KEY}={path}")
-    print()
-    print("Сборка с этой переменной подписывает модули логики и кладёт публичный")
-    print("ключ на устройство; сборка без неё остаётся прежней -- неподписанной.")
-    return 0
-
-
 def cmd_dev(args):
     app_file = Path(args.app).resolve()
     app = load_app(app_file)
@@ -249,13 +221,6 @@ def main(argv=None):
     p_serve.add_argument("--build", action="store_true",
                          help="rebuild the web client before serving")
     p_serve.set_defaults(func=cmd_serve)
-
-    p_keygen = sub.add_parser(
-        "keygen", help="create the publisher signing key (Ed25519)")
-    p_keygen.add_argument("path", help="where to write the private key (PEM)")
-    p_keygen.add_argument("--force", action="store_true",
-                          help="overwrite an existing key file")
-    p_keygen.set_defaults(func=cmd_keygen)
 
     p_declare = sub.add_parser(
         "declare", help="print the declaration bundle the builder reads")

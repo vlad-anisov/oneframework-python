@@ -69,22 +69,41 @@ def collect(example):
     return json.loads(out.stdout)
 
 
-def test_type_table_is_up_to_date():
-    """Файл договора обязан совпадать с тем, что говорят классы полей."""
-    записано = json.loads(protocol.TABLE_PATH.read_text(encoding="utf-8"))
-    assert записано == protocol.document(), (
-        "protocol/field-types.json отстал от классов полей. "
-        "Пересоберите: python3 -m oneframework.protocol"
+def test_the_binding_declares_exactly_the_types_the_contract_names():
+    """Состав типов у привязки и у договора -- один.
+
+    Раньше здесь сверялись **значения**: файл договора против того, что говорят
+    классы полей. Сверять их больше нечем и незачем -- с 02.09.2026 классы
+    берут колонку, виджеты и умолчания **из** этого файла, и сравнение
+    сравнивало бы его с самим собой.
+
+    Осталось то, что круговым не стало: состав. Класс, называющий тип, которого
+    в договоре нет, отказывает при объявлении -- это ловит сам питон. А вот
+    обратное, тип в договоре без класса у привязки, не заметил бы никто: она
+    молча не умела бы его объявлять, и узналось бы это на чужом приложении.
+    """
+    from oneframework.model.fields import FIELD_TYPES
+
+    в_договоре = set(protocol.load()["types"])
+    у_привязки = set(FIELD_TYPES)
+    assert у_привязки == в_договоре, (
+        f"только у привязки: {sorted(у_привязки - в_договоре)}; "
+        f"только в договоре: {sorted(в_договоре - у_привязки)}"
     )
 
 
-def test_every_field_type_is_in_the_table():
-    """Ни один тип поля не должен потеряться по дороге в договор."""
-    from oneframework.model.fields import FIELD_TYPES
+def test_a_type_the_contract_does_not_name_is_refused():
+    """Класс поля с типом мимо договора отказывает при объявлении.
 
-    таблица = protocol.field_types()
-    пропали = sorted(set(FIELD_TYPES) - set(таблица))
-    assert not пропали, f"типы полей без описания в договоре: {пропали}"
+    Иначе привязка завела бы у себя тип, которого два других языка не знают, и
+    приложение с ним собралось бы -- а на устройстве поле оказалось бы без
+    колонки и без виджета.
+    """
+    from oneframework.errors import DslError
+    from oneframework.model.fields import Field
+
+    with pytest.raises(DslError, match="field-types.json"):
+        type("Выдуманное", (Field,), {"ftype": "нет-такого"})
 
 
 @pytest.mark.parametrize("example", EXAMPLES)
