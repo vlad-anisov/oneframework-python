@@ -10,7 +10,7 @@
  * число, а не впечатление от чтения трёх файлов подряд.
  */
 
-import { Bool, Cmp, Not, Order, Ref, toJson } from "../../libs/js/src/expr.mjs";
+import { Order, Ref, TextExpr, toJson } from "../../libs/js/src/expr.mjs";
 
 let raw = "";
 process.stdin.setEncoding("utf8");
@@ -23,16 +23,23 @@ process.stdin.on("end", () => {
   const child = () => new Ref(grammar.sentinels.child.r);
   const имя = grammar.sentinels.name;
 
-  /** Чем библиотека собирает узел грамматики. Чего здесь нет -- того не умеет. */
+  /**
+   * Чем библиотека собирает узел грамматики. Чего здесь нет -- того не умеет.
+   *
+   * Умеет она немного, и это решение: условие пишется строкой, а дерево из неё
+   * собирает разборщик ядра -- один на все языки. Держи каждая привязка ещё и
+   * свои `.eq`/`.and`, у неё был бы второй способ сказать то же самое, и
+   * сверять пришлось бы не договор с привязкой, а привязку саму с собой.
+   *
+   * Остались те роды, которые строкой не пишутся: ссылка (ею называют колонку
+   * в порядке и поле в строке), порядок сортировки и сама строка.
+   */
   const build = {
     record_ref: () => new Ref(имя),
     view_ref: () => new Ref(имя, "view"),
     item_ref: () => new Ref(имя, "item"),
-    cmp: (sample) => new Cmp(sample.op, child(), child()),
-    and: (sample) => new Bool(sample.op, [child(), child()]),
-    or: (sample) => new Bool(sample.op, [child(), child()]),
-    not: () => new Not(child()),
     order: (sample) => new Order(child(), sample.dir),
+    text: (sample) => new TextExpr(sample.text),
   };
 
   const built = {};
