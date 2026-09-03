@@ -2,7 +2,7 @@
 
 Что база выходит правильной, проверяет `tests/js/build-db.test.mjs` -- там
 сборщик и живёт. Здесь остались двери, которыми в него ходит питон:
-`write_app_db`, `build_plan` и загрузка приложения, объявленного не на питоне.
+Писатель базы, план и загрузка приложения, объявленного не на питоне.
 
 Сегодня пишет один. Питон говорит, что класть (`cli/plan.py`), кладёт
 `libs/js/src/build-db.mjs`.
@@ -80,12 +80,12 @@ def _содержимое(файл):
 #: сломалась ровно на этом переезде, и поймал это не прогон, а руки.
 def test_a_declaration_bundle_builds_through_the_same_writer(tmp_path):
     """Приложение, объявленное **не на питоне**, собирается тем же сборщиком."""
-    from oneframework.cli.assets import write_app_db
+    from conftest import собрать_базу
     from conftest import объявить
 
     app = Bundle(объявить(ROOT / "examples" / "notes-js" / "app.mjs"))
     файл = tmp_path / "bundle.db"
-    write_app_db(app, None, файл)
+    собрать_базу(app, файл)
 
     что = _содержимое(файл)
     таблицы = {имя for имя, _ in что["таблицы"]}
@@ -95,25 +95,27 @@ def test_a_declaration_bundle_builds_through_the_same_writer(tmp_path):
     виды = {d["name"] for d in что["определения"] if d["kind"] == "view"}
     assert виды, "ни одного вида не выложено"
 
+def test_посев_в_план_стороной_не_заходит():
+    """Посев записан в пакете, и другого пути в план у него нет.
 
-def test_a_plan_refuses_a_seed_by_name(tmp_path):
-    """Посев в план стороной больше не заходит: он записан в пакете.
+    Прежде это стерегла питоновская обёртка: она принимала ``seed=`` и
+    отказывала вслух. Обёртки больше нет -- план считает ядро, и параметра,
+    которым посев можно было бы подсунуть мимо пакета, у него не существует.
+    Проверяется теперь именно это: у плана ровно один вход.
 
-    Прежде пакет посева не нёс, и `build_plan` отказывал ему вслух. Тогда
-    посев прогоняла сборка -- и собрать то же приложение без питона было нельзя.
-    Теперь строки пишет тот, кто печатает пакет (`declare(app, seed)`), а
-    `build_plan` не принимает их ни от кого.
-
-    Отказ, а не молчание: проглоти план `seed=`, база вышла бы без демо-данных,
-    и объяснить это было бы нечем -- ни ошибки, ни следа, просто нет записей.
+    Молчание было бы хуже отказа: проглоти план посев стороной, база вышла бы
+    без демо-данных -- ни ошибки, ни следа, просто нет записей.
     """
-    from oneframework.cli.plan import build_plan
-    from conftest import объявить
-    from oneframework.errors import OneFrameworkError
+    from conftest import объявить, план
 
-    app = Bundle(объявить(ROOT / "examples" / "notes-js" / "app.mjs"))
-    with pytest.raises(OneFrameworkError, match="declare"):
-        build_plan(app, seed=lambda _db: None)
+    пакет = Bundle(объявить(ROOT / "examples" / "notes-js" / "app.mjs"))
+    assert план(пакет)["seeds"] == пакет.seeds
+    # Питоновский объект приложения план не принимает: у каждого языка был бы
+    # свой путь мимо договора.
+    from conftest import ОтказЯдра
+
+    with pytest.raises(ОтказЯдра, match="пакет объявления"):
+        план({"models": None})
 
 
 def test_a_javascript_bundle_declares_it_has_no_seeds(tmp_path):
@@ -123,12 +125,12 @@ def test_a_javascript_bundle_declares_it_has_no_seeds(tmp_path):
     бы ключа просто не было, «данных нет» и «раздел потеряли» стали бы
     неразличимы -- ровно тем же доводом, что у «logic».
     """
-    from oneframework.cli.plan import build_plan
+    from conftest import план
     from conftest import объявить
 
     app = Bundle(объявить(ROOT / "examples" / "notes-js" / "app.mjs"))
     assert app.seeds == []
-    assert build_plan(app)["seeds"] == []
+    assert план(app)["seeds"] == []
 
 
 # --------------------------------------------------------------------- посев
@@ -136,10 +138,14 @@ def test_a_javascript_bundle_declares_it_has_no_seeds(tmp_path):
 #: отметку и решает, сеять ли. Проверяется он **на новой дороге**, потому что
 #: старая (`App.publish`) уходит, а правила остаются те же.
 def _посеять(tmp_path, app, seed, файл=None, поверх=False):
-    from oneframework.cli.assets import write_app_db
+    from conftest import собрать_базу
+    from oneframework.declaration import Bundle, declare
 
     файл = файл or (tmp_path / "seeded.db")
-    write_app_db(app, seed, файл, поверх=поверх)
+    # Посев печатается **в пакет**, а не передаётся писателю рядом с ним: у
+    # писателя одна дорога, и второй, питоновской, быть не должно -- иначе
+    # ядро без привязки собрало бы другое приложение.
+    собрать_базу(Bundle(declare(app, seed)), файл, поверх=поверх)
     return файл
 
 
@@ -233,14 +239,14 @@ def test_building_a_second_app_does_not_inherit_the_first(tmp_path):
     Поймано было прогоном e2e, а не этой проверкой: она всегда собирала в свежий
     временный файл и потому не могла столкнуться с накоплением.
     """
-    from oneframework.cli.assets import write_app_db
+    from conftest import собрать_базу
     from conftest import объявить
 
     файл = tmp_path / "shared.db"
-    write_app_db(Bundle(объявить(ROOT / "examples" / "todo" / "app.py")), None, файл)
+    собрать_базу(Bundle(объявить(ROOT / "examples" / "todo" / "app.py")), файл)
     первое = {о["name"] for о in _содержимое(файл)["определения"] if о["kind"] == "model"}
 
-    write_app_db(Bundle(объявить(ROOT / "examples" / "gtasks" / "app.py")), None, файл)
+    собрать_базу(Bundle(объявить(ROOT / "examples" / "gtasks" / "app.py")), файл)
     второе = {о["name"] for о in _содержимое(файл)["определения"] if о["kind"] == "model"}
 
     assert первое & второе == set() or первое != второе
@@ -256,19 +262,19 @@ def test_inspect_keeps_what_is_already_in_the_file(tmp_path):
     """
     import sqlite3
 
-    from oneframework.cli.assets import write_app_db
+    from conftest import собрать_базу
     from conftest import объявить
 
     файл = tmp_path / "user.db"
     app = Bundle(объявить(ROOT / "examples" / "todo" / "app.py"))
-    write_app_db(app, None, файл)
+    собрать_базу(app, файл)
 
     con = sqlite3.connect(файл)
     con.execute('INSERT INTO "todo_line" ("id","text") VALUES (?,?)', ("u-1", "моя"))
     con.commit()
     con.close()
 
-    write_app_db(app, None, файл, поверх=True)
+    собрать_базу(app, файл, поверх=True)
     con = sqlite3.connect(файл)
     try:
         assert con.execute('SELECT count(*) FROM "todo_line" WHERE "id" = ?',

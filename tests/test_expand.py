@@ -124,9 +124,9 @@ def test_the_document_carries_the_aggregate_and_not_its_value():
     # Спрашивается **план**: выражение объявлено строкой, а дерево из неё
     # собирает сборка. В документе до сборки лежит строка, и это то же самое
     # объявление -- но увидеть, что оно правда свёртка, можно только развернув.
-    from oneframework.cli.plan import build_plan
+    from conftest import план
 
-    план = build_plan(_пакетом(App(Boards, title="Развороты")))
+    план = план(_пакетом(App(Boards, title="Развороты")))
     вид = next(д for в, и, д in план["defs"] if в == "view" and и == "Boards")
     tab = вид["children"][0]["children"][0]["children"][0]
     accordion = tab["children"][1]
@@ -140,9 +140,9 @@ def test_the_document_lands_in_the_database_beside_the_data():
     Спрашивается план выкладки: он и отвечает, что поедет в базу. Саму запись
     делает сборщик на JS, и её проверяет `test_build_db.py`.
     """
-    from oneframework.cli.plan import build_plan
+    from conftest import план
 
-    план = build_plan(_пакетом(App(Boards, title="Развороты")))
+    план = план(_пакетом(App(Boards, title="Развороты")))
     поедет = {и: д for в, и, д in план["defs"] if в == "view"}
     # Сверяются **имена и строение**, а не тела выражений: в документе они
     # объявлены строкой, а план их разворачивает, и сравнивать одно с другим

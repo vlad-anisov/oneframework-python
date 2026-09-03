@@ -202,9 +202,9 @@ def test_each_module_seeds_independently(tmp_path):
     #: Посев спрашивается у плана: он и решает, что поедет в базу. Что база
     #: получает это ровно один раз -- проверяет `test_build_db.py`, там же, где
     #: живёт сама запись.
-    from oneframework.cli.plan import build_plan
+    from conftest import план as построить
 
-    план = build_plan(_пакетом(app))
+    план = построить(_пакетом(app))
     посеяно = [р for п in план["seeds"] for р in п["rows"].get("A", ())]
     assert len(посеяно) == 1
     assert посеяно[0]["name"] == "from alpha"
@@ -213,10 +213,10 @@ def test_each_module_seeds_independently(tmp_path):
 def test_an_existing_install_does_not_reseed_after_a_marker_rename(tmp_path):
     """Upgrading the framework must not duplicate demo data."""
     from oneframework import App
-    from oneframework.cli.plan import build_plan
+    from conftest import план as построить
 
     app = App(_Дом, title="Legacy")
-    план = build_plan(_пакетом(app, lambda _db: None))
+    план = построить(_пакетом(app, lambda _db: None))
     посев = next(п for п in план["seeds"] if п["mark"].endswith(":app"))
     #: План обязан назвать и прежние имена отметки. Смотрит на них сборщик, и
     #: то, что он их принимает, проверено в `test_build_db.py`; здесь -- что он
@@ -254,11 +254,13 @@ def test_logic_declared_as_a_compiled_module_refuses_by_name(tmp_path):
         LOGIC = [{"module": "logic/tasks.wasm", "language": "rust",
                   "actions": [{"name": "G.touch"}]}]
     ''')
-    from oneframework.cli.plan import build_plan
+    from conftest import ОтказЯдра, план as построить
 
+    # Отказ приходит **словами ядра**: правило живёт там, и переводить его в
+    # питоновское исключение значило бы завести вторую запись отказа.
     app = App(modules=load_all(tmp_path), title="Gone")
-    with pytest.raises(OneFrameworkError, match="logic/tasks.wasm"):
-        build_plan(_пакетом(app))
+    with pytest.raises(ОтказЯдра, match="logic/tasks.wasm"):
+        построить(_пакетом(app))
 
 
 def _пакетом(app, seed=None):

@@ -33,15 +33,19 @@ EXAMPLES = ["notes-python", "todo", "showcase", "kitchen", "gtasks"]
 #:
 #: Слева -- питоновские классы моделей (`app_schema`, `App.meta`), справа --
 #: документы из пакета объявления, то есть ровно то, что приезжает от Kotlin и
-#: JavaScript. Раньше слева стоял `build_plan(app)`, но дорога в план теперь
+#: JavaScript. Раньше слева стоял `план(app)`, но дорога в план теперь
 #: одна -- через пакет, -- и сравнение вышло бы само с собой. Второй счёт
 #: остался тем же: он считает по объектам, не заглядывая в пакет.
 _COLLECT = r"""
 import json, sys, tempfile
 sys.path.insert(0, sys.argv[1])
+# Каталог проверок -- ради `conftest`: план считает ядро. От рабочей папки, а
+# не от `argv[1]`: там лежит пример, а не корень.
+import os
+sys.path.insert(0, os.path.join(os.getcwd(), "tests"))
 from pathlib import Path
 
-from oneframework.cli.plan import build_plan
+from conftest import план
 from oneframework.__main__ import _приложение
 from oneframework.declaration import Bundle, declare
 from oneframework.model.schema import app_schema
@@ -52,7 +56,7 @@ bundle = Bundle(declare(app))
 # стороне JS, и оба счёта обязаны привести к нему с одинаковым описанием.
 print(json.dumps({
     "schema_from_classes": app_schema(app),
-    "schema_from_bundle": build_plan(bundle)["schema"],
+    "schema_from_bundle": план(bundle)["schema"],
     "meta_from_app": app.meta(),
     "meta_from_bundle": bundle.meta(),
 }, ensure_ascii=False, default=str))

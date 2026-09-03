@@ -57,9 +57,9 @@ def test_an_app_puts_its_models_into_the_plan():
     Спрашивается план, а не база: класть его в базу -- работа сборщика на JS
     (`libs/js/src/build-db.mjs`), и она проверяется в `test_build_db.py`.
     """
-    from oneframework.cli.plan import build_plan
+    from conftest import план
 
-    план = build_plan(_пакетом(App(Screen, title="T")))
+    план = план(_пакетом(App(Screen, title="T")))
     assert {и for в, и, _ in план["defs"] if в == "model"} == {"Board", "Task"}
 
 

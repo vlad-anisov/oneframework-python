@@ -111,9 +111,9 @@ def test_the_example_declares_logic_and_it_reaches_the_database(app, runtime):
         importlib.import_module("oneframework.wasm")
     #: Спрашивается **план выкладки**: он и отвечает, что поедет в базу. Что
     #: оно доехало и до рантайма, говорит `logic_actions` ниже.
-    from oneframework.cli.plan import build_plan
+    from conftest import план
 
-    docs = [д for в, _и, д in build_plan(_пакетом(app))["defs"] if в == "action"]
+    docs = [д for в, _и, д in план(_пакетом(app))["defs"] if в == "action"]
     # Два объявления и два разных способа их посчитать: «Task.complete» --
     # правило плюс правка, то есть запрос; «Board.normalize» -- исходник
     # питона, потому что словарной морфологии в SQL нет и не будет. Оба при
@@ -155,10 +155,10 @@ def test_a_computed_field_has_no_column(app):
     # Схема из **плана**, а не от классов: формула объявлена строкой, дерево из
     # неё собирает ядро, и компилятору нужно именно дерево. Схема от классов
     # отдала бы ему нерасшифрованную строку.
-    from oneframework.cli.plan import build_plan
+    from conftest import план
     from oneframework.declaration import Bundle, declare
 
-    call("load_models", build_plan(Bundle(declare(app)))["schema"])
+    call("load_models", план(Bundle(declare(app)))["schema"])
     ответ = call("computed_columns_of", "Board", "t")
     assert dict(ответ["columns"]).keys() == {"progress"}
     assert not ответ["refused"]

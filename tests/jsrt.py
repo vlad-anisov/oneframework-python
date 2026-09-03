@@ -129,9 +129,10 @@ def _выложить(app, файл, seed):
     проверки рантайма смотрели бы в базу, написанную не той рукой, что пишет
     настоящую.
     """
-    from oneframework.cli.assets import write_app_db
+    from conftest import собрать_базу
+    from oneframework.declaration import Bundle, declare
 
-    write_app_db(app, seed, Path(файл))
+    собрать_базу(Bundle(declare(app, seed)), Path(файл))
 
 
 def _имя(модель):

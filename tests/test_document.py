@@ -244,14 +244,15 @@ def test_nothing_is_skipped_silently():
     script = r"""
 import json, sys, tempfile
 sys.path.insert(0, sys.argv[1]); sys.path.insert(0, sys.argv[2])
-from oneframework.cli.plan import build_plan
+import os; sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))
+from conftest import план
 from oneframework.declaration import Bundle, declare
 from oneframework.model.defs import SKIPPED
 
 # Что поедет в базу -- это **план**: пропуск вида решается при сборке
 # документов, а не при записи, и спрашивать надо там же.
 app = __import__("app").app
-план = build_plan(Bundle(declare(app)))
+план = план(Bundle(declare(app)))
 print(json.dumps({"skipped": SKIPPED,
                   "published": [и for в, и, _ in план["defs"] if в == "view"],
                   "declared": [v.__name__ for v in app.views]}, ensure_ascii=False))

@@ -6,9 +6,9 @@
 приложение знает хоть что-то сверх своего же напечатанного пакета, значит
 привязка передаёт это мимо договора, и ядро без неё соберёт другое приложение.
 
-Прежде у `build_plan` было две дороги -- у приложения он брал объекты, у
+Прежде у плана было две дороги -- у приложения он брал объекты, у
 пакета читал документы. Они молча сходились; питоновскую дорогу убрали, и
-`build_plan` принимает только пакет.
+План принимает только пакет.
 
 Тогда встал вопрос, чем сверять: сравнивать пакет с самим собой -- пустая
 работа. Сверяем со **вторым счётом** -- `model_defs`, `view_defs`, `app_schema`
@@ -43,6 +43,8 @@ from pathlib import Path
 
 корень, пример = sys.argv[1], sys.argv[2]
 sys.path.insert(0, корень)
+# Каталог проверок -- ради `conftest`: план считает ядро, и зовут его оттуда.
+sys.path.insert(0, str(Path(корень) / "tests"))
 sys.path.insert(0, str(Path(корень) / "examples" / пример))
 
 import app as модуль
@@ -52,7 +54,7 @@ try:
 except ImportError:
     посев = None
 
-from oneframework.cli.plan import build_plan
+from conftest import план
 from oneframework.declaration import Bundle, declare, record_seeds
 from oneframework.model.defs import model_defs, view_defs
 from oneframework.model.schema import app_schema
@@ -60,7 +62,7 @@ from oneframework.model.schema import app_schema
 приложение = модуль.app
 # Через текст JSON намеренно: пакет едет строкой, и всё, что до неё не
 # доживает, до устройства тоже не доедет.
-план = build_plan(Bundle(json.loads(json.dumps(declare(приложение, посев)))))
+план = план(Bundle(json.loads(json.dumps(declare(приложение, посев)))))
 
 ключ = lambda d: (d[0], d[1])
 свой = ([list(t) for t in model_defs(приложение.models)]
@@ -144,10 +146,10 @@ def test_приложение_в_план_больше_не_ходит():
     а у пользователя.
     """
     from oneframework import App
-    from oneframework.cli.plan import build_plan
+    from conftest import план
 
     with pytest.raises(Exception, match="пакет объявления"):
-        build_plan(App(_Пусто, title="T"))
+        план(App(_Пусто, title="T"))
 
 
 def test_хоть_один_пример_вправду_сеет():
