@@ -20,6 +20,16 @@ import { isDeclarative, isJs, isPython, isWasm } from "../../libs/js/src/core/re
 import { evaluate } from "../../libs/js/src/core/expr.js";
 import { makeModels } from "../../libs/js/src/core/runtime/fields.js";
 import { AccessPath, Mutation, compileRule, compileScreen } from "../../libs/js/src/core/rel/plan.js";
+import { развернутьТекст } from "../../libs/js/src/build/plan.mjs";
+
+/**
+ * Развернуть выражения, записанные строкой, -- ровно как это делает сборка.
+ *
+ * Рантайм строк не видит: до устройства доезжает дерево. Поэтому и здесь
+ * строка разворачивается **на входе**, а не понимается компилятором: понимай
+ * её компилятор, разбор пришлось бы возить на устройство.
+ */
+const развернуть = (что) => развернутьТекст(что);
 
 //: Модели живут между запросами. Гнать их описание с каждым вызовом --
 //: значит слать килобайты на каждое утверждение и, хуже, собирать их заново:
@@ -30,8 +40,12 @@ let МОДЕЛИ = null;
 //: Имена -- те же, что у питона, чтобы проверка читалась одинаково с обеих
 //: сторон. Переименование здесь стоило бы слоя перевода в каждой проверке.
 const ОПЕРАЦИИ = {
-  compile_query: (payload) => compileQuery(payload),
+  // Строкой JSON, как её шлёт проверка. Разворот -- до компилятора: он ждёт
+  // дерево, а строку разворачивает сборка, и здесь тот же порядок.
+  compile_query: (payload) => compileQuery(
+    JSON.stringify(развернуть(JSON.parse(payload)))),
   compile_expr: (node, opts) => {
+    node = развернуть(node);
     const o = { ...(opts || {}) };
     if (Array.isArray(o.nullable)) o.nullable = new Set(o.nullable);
     const c = compileExpr(node, o);
@@ -39,12 +53,12 @@ const ОПЕРАЦИИ = {
     return { sql: c.sql, params: c.params, status: c.status, form: c.form,
              missing: c.missing, reads: c.reads };
   },
-  canonical: (node) => canonical(node),
+  canonical: (node) => canonical(развернуть(node)),
   //: Вычислить условие на записи -- то, чем устройство решает, рисовать ли
   //: узел. Питоновский вычислитель был вторым; правила спрашиваются у того,
   //: который правда решает.
   evaluate: (node, record, viewState) =>
-    Boolean(evaluate(node, { record: record || {}, view: viewState || {} })),
+    Boolean(evaluate(развернуть(node), { record: record || {}, view: viewState || {} })),
   //: План выборки. По проводу едут поля, а не объекты: `AccessPath` и
   //: `Compiled` -- объекты с методами, и питоновская сторона всё равно смотрит
   //: только на то, что они рассказывают о себе.

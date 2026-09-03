@@ -25,6 +25,10 @@ from pathlib import Path
 
 import pytest
 
+from oneframework.declaration import Bundle
+
+from conftest import объявить
+
 from conftest import needs_node
 from oneframework import App, Model, Screen, String, View
 
@@ -77,9 +81,9 @@ def _содержимое(файл):
 def test_a_declaration_bundle_builds_through_the_same_writer(tmp_path):
     """Приложение, объявленное **не на питоне**, собирается тем же сборщиком."""
     from oneframework.cli.assets import write_app_db
-    from oneframework.cli.sources import load
+    from conftest import объявить
 
-    app = load(ROOT / "examples" / "notes-js" / "app.mjs")
+    app = Bundle(объявить(ROOT / "examples" / "notes-js" / "app.mjs"))
     файл = tmp_path / "bundle.db"
     write_app_db(app, None, файл)
 
@@ -104,10 +108,10 @@ def test_a_plan_refuses_a_seed_by_name(tmp_path):
     и объяснить это было бы нечем -- ни ошибки, ни следа, просто нет записей.
     """
     from oneframework.cli.plan import build_plan
-    from oneframework.cli.sources import load
+    from conftest import объявить
     from oneframework.errors import OneFrameworkError
 
-    app = load(ROOT / "examples" / "notes-js" / "app.mjs")
+    app = Bundle(объявить(ROOT / "examples" / "notes-js" / "app.mjs"))
     with pytest.raises(OneFrameworkError, match="declare"):
         build_plan(app, seed=lambda _db: None)
 
@@ -120,9 +124,9 @@ def test_a_javascript_bundle_declares_it_has_no_seeds(tmp_path):
     неразличимы -- ровно тем же доводом, что у «logic».
     """
     from oneframework.cli.plan import build_plan
-    from oneframework.cli.sources import load
+    from conftest import объявить
 
-    app = load(ROOT / "examples" / "notes-js" / "app.mjs")
+    app = Bundle(объявить(ROOT / "examples" / "notes-js" / "app.mjs"))
     assert app.seeds == []
     assert build_plan(app)["seeds"] == []
 
@@ -230,13 +234,13 @@ def test_building_a_second_app_does_not_inherit_the_first(tmp_path):
     временный файл и потому не могла столкнуться с накоплением.
     """
     from oneframework.cli.assets import write_app_db
-    from oneframework.cli.sources import load
+    from conftest import объявить
 
     файл = tmp_path / "shared.db"
-    write_app_db(load(ROOT / "examples" / "todo" / "app.py"), None, файл)
+    write_app_db(Bundle(объявить(ROOT / "examples" / "todo" / "app.py")), None, файл)
     первое = {о["name"] for о in _содержимое(файл)["определения"] if о["kind"] == "model"}
 
-    write_app_db(load(ROOT / "examples" / "gtasks" / "app.py"), None, файл)
+    write_app_db(Bundle(объявить(ROOT / "examples" / "gtasks" / "app.py")), None, файл)
     второе = {о["name"] for о in _содержимое(файл)["определения"] if о["kind"] == "model"}
 
     assert первое & второе == set() or первое != второе
@@ -253,10 +257,10 @@ def test_inspect_keeps_what_is_already_in_the_file(tmp_path):
     import sqlite3
 
     from oneframework.cli.assets import write_app_db
-    from oneframework.cli.sources import load
+    from conftest import объявить
 
     файл = tmp_path / "user.db"
-    app = load(ROOT / "examples" / "todo" / "app.py")
+    app = Bundle(объявить(ROOT / "examples" / "todo" / "app.py"))
     write_app_db(app, None, файл)
 
     con = sqlite3.connect(файл)

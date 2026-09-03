@@ -1,4 +1,4 @@
-"""Repeat, Count и Exists -- то, чем заменяется питоновский цикл в виде.
+"""Repeat и свёртки -- то, чем заменяется питоновский цикл в виде.
 
 Проверяется главное свойство: структура следует за данными, а не за моментом,
 когда собиралось дерево. Плюс то, что опечатка в ``item.`` падает при сборке --
@@ -9,10 +9,10 @@ import json
 
 import pytest
 
-from oneframework import Boolean, Count, Exists, Many2one, Model, Repeat, Row, String
+from oneframework import Boolean, Many2one, Model, Repeat, Row, String
 from oneframework.errors import DslError
 from oneframework.model.exprjson import from_json, to_json
-from oneframework.model.expr import item, record
+from oneframework.model.expr import expr, item, record
 
 
 class Board(Model):
@@ -39,7 +39,7 @@ def test_repeat_emits_its_model_and_body():
 
 
 def test_repeat_carries_its_own_domain():
-    assert "domain" in _built(Repeat(Board, Row(), domain=record.name != ""))
+    assert "domain" in _built(Repeat(Board, Row(), domain=expr('record.name != ""')))
 
 
 def test_repeat_without_domain_says_nothing():
@@ -60,19 +60,16 @@ def test_known_item_field_passes():
     node.bind(Task, "TestView")             # не должно бросить
 
 
-def test_count_and_exists_survive_json():
-    for expr in (Count(Task, (record.board == item.id) & ~record.done),
-                 Exists(Task, record.done),
-                 Count(Task)):
-        back = from_json(json.loads(json.dumps(to_json(expr))))
-        assert to_json(back) == to_json(expr)
+def test_свёртка_доезжает_объявлением():
+    """Свёртка пишется строкой, а дерево из неё собирает сборка.
 
-
-def test_aggregate_names_its_model_not_the_class_object():
-    doc = to_json(Count(Task, record.done))
-    assert doc == {"agg": "count", "model": "Task", "domain": {"r": "done"}}
+    Печатать её питоном больше нечем, и это к лучшему: пока печатал он, у
+    одного языка из трёх была своя запись свёртки, а у двух других не было
+    никакой. Дерево сторожится там, где собирается, --
+    `tests/js/expr-text-wire.test.mjs`; здесь -- что объявление её доносит.
+    """
+    doc = to_json(expr("count(Task, record.done, via=board)"))
+    assert doc == {"text": "count(Task, record.done, via=board)"}
     assert json.dumps(doc)                  # сериализуемо без обхода
 
 
-def test_bare_count_has_no_domain_key():
-    assert "domain" not in to_json(Count(Task))

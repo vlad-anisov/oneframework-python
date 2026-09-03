@@ -7,6 +7,27 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+#: Команда ядра. Дорога к пакету теперь одна на все четыре языка, и проверки
+#: ходят ею же, а не в обход: обходная дорога проверяет не то, чем пользуются.
+КОМАНДА = ROOT / "libs" / "js" / "bin" / "oneframework.mjs"
+
+
+def объявить(приложение) -> dict:
+    """Пакет объявления по файлу приложения -- любого из четырёх языков.
+
+    Подпроцессом, и это не осторожность: реестр моделей у питона глобален и
+    ключуется именем класса, а ``Task`` есть в трёх примерах. Загрузи их в один
+    процесс -- и связи начнут разрешаться в чужой класс, причём молча.
+    """
+    узел = shutil.which("node")
+    if узел is None:
+        pytest.skip("node на этой машине нет")
+    готово = subprocess.run([узел, str(КОМАНДА), "declare", str(приложение)],
+                            capture_output=True, text=True, cwd=str(ROOT))
+    assert готово.returncode == 0, f"{приложение}: {готово.stderr}"
+    return json.loads(готово.stdout)
+
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "examples" / "todo"))
 

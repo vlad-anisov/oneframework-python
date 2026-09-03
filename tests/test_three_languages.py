@@ -88,11 +88,9 @@ def python_bundle():
     ``app.py``, получил бы это. Один раз уже получил -- тридцать одна ошибка
     в тестах, не имеющих к языкам никакого отношения.
     """
-    out = subprocess.run(
-        [sys.executable, "-m", "oneframework.cli.main", "declare", str(PYTHON_APP)],
-        capture_output=True, text=True, cwd=str(ROOT))
-    assert out.returncode == 0, out.stderr
-    return json.loads(out.stdout)
+    from conftest import объявить
+
+    return объявить(PYTHON_APP)
 
 
 def javascript_bundle():
@@ -111,11 +109,9 @@ def kotlin_bundle():
 
     if not спросить():
         pytest.skip("компилятора Kotlin нет: KOTLIN_HOME не указан")
-    # Печатает пакет **ядро** (`libs/js/src/build/kotlin.mjs`): питоновской
-    # привязки Kotlin больше нет. Дорога та же, которой ходит сборка.
-    from oneframework.cli.sources import from_kotlin
+    from conftest import объявить
 
-    return from_kotlin(KOTLIN_APP).doc
+    return объявить(KOTLIN_APP)
 
 
 def test_vendored_type_tables_match_the_protocol():
@@ -177,9 +173,9 @@ def _богатый_питон():
 
 
 def _богатый(язык, путь):
-    from oneframework.cli.sources import from_javascript, from_kotlin
+    from conftest import объявить
 
-    return (from_javascript if язык == "js" else from_kotlin)(путь).doc
+    return объявить(путь)
 
 
 @needs_node

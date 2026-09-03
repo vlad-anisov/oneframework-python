@@ -16,10 +16,10 @@
 """
 
 from oneframework import (
-    Accordion, App, Boolean, Button, Col, Color, Count, Create, Date, Datetime,
-    Delete, Exists, Filter, Float, Group, Icon, Integer, List, Many2one, Menu,
+    Accordion, App, Boolean, Button, Col, Color, Create, Date, Datetime,
+    Delete, Filter, Float, Group, Icon, Integer, List, Many2one, Menu,
     Model, Monetary, Pill, Repeat, Row, Save, Screen, Search, Section,
-    Selection, Sort, String, Tab, Tabs, Text, Time, View, record, view,
+    Selection, Sort, String, Tab, Tabs, Text, Time, View, expr, record, view,
 )
 from oneframework.model.expr import item
 
@@ -97,7 +97,7 @@ class Полки(View):
                     Tab(
                         "{item.name}",
                         Icon("book"),
-                        Pill(Count(Книга, (record.shelf == item.id) & ~record.read),
+                        Pill(expr("count(Книга, record.shelf = item.id & !record.read)"),
                              when="closed"),
                         Button(place="fab",
                                action=Книга.create(open=Карточка,
@@ -107,7 +107,7 @@ class Полки(View):
                             item=Строка,
                             open=Карточка,
                             label="{item.name}",
-                            domain=(record.shelf == item.id) & ~record.read,
+                            domain=expr("record.shelf = item.id & !record.read"),
                             menu=Menu(
                                 Button("Новая книга",
                                        action=Книга.create(open=Карточка, draft=True)),
@@ -115,17 +115,16 @@ class Полки(View):
                                     "Удалить прочитанные",
                                     action=Delete(
                                         Книга,
-                                        domain=(record.shelf == item.id) & record.read,
+                                        domain=expr("record.shelf = item.id & record.read"),
                                         confirm="Удалить прочитанное с «{item.name}»?",
                                     ),
-                                    enabled=Exists(Книга,
-                                                   (record.shelf == item.id) & record.read),
+                                    enabled=expr("exists(Книга, record.shelf = item.id & record.read)"),
                                 ),
                                 icon="more_horiz",
                             ),
                             search=Search(
                                 record.title,
-                                Filter("Непрочитанные", ~record.read, default=True),
+                                Filter("Непрочитанные", expr("!record.read"), default=True),
                                 Filter("Прочитанные", record.read),
                                 Sort("По порядку", record.sequence, default=True),
                                 Sort("Позже куплённые", record.bought.desc(), section=True),
@@ -133,9 +132,9 @@ class Полки(View):
                         ),
                         Accordion(
                             List(Книга, item=Строка,
-                                 domain=(record.shelf == item.id) & record.read),
+                                 domain=expr("record.shelf = item.id & record.read")),
                             label="Прочитанные",
-                            visible=Exists(Книга, (record.shelf == item.id) & record.read),
+                            visible=expr("exists(Книга, record.shelf = item.id & record.read)"),
                         ),
                     ),
                 ),

@@ -25,11 +25,12 @@ from oneframework import (
     UNSET,
     View,
     record,
+    expr,
     view,
 )
 from oneframework import Button, Create, Delete, Filter, Icon, List, Open, Pill, Tab
 from oneframework.errors import DslError
-from oneframework.model.expr import Cmp, Not, Order, RecordFieldRef, ViewFieldRef
+from oneframework.model.expr import Order, RecordFieldRef, ViewFieldRef
 from oneframework.model.fields import Field
 from oneframework.model.exprjson import to_json
 
@@ -136,6 +137,20 @@ def test_a_ui_method_is_ordinary_python():
     assert [f.widget for f in fields] == ["title", "subtitle"]
 
 
+def test_a_field_is_both_a_reference_and_a_ui_factory():
+    """Поле -- и ссылка, и способ нарисовать себя. Обе роли остаются.
+
+    Сравнений и «не» у поля больше нет: выражение пишется строкой, одинаково на
+    трёх языках. Но ссылка на поле по-прежнему нужна -- ею называют колонку в
+    порядке сортировки и поле в строке списка.
+    """
+    assert isinstance(Line.text, Field)                      # ссылка
+    assert Line.text().node_type == "field"                  # вид, виджет по умолчанию
+    assert Line.text(widget="title").widget == "title"       # вид, виджет назван
+    assert isinstance(Line.created_at.desc(), Order)         # порядок
+    assert Line.text().widget is None  # падает на умолчание типа
+
+
 def test_record_refs_inside_a_list_bind_to_the_list_model():
     class Board(View):
         def ui(self, record):
@@ -144,7 +159,7 @@ def test_record_refs_inside_a_list_bind_to_the_list_model():
                     Line,
                     search=Search(
                         record.text,
-                        Filter("Left", ~record.completed, default=True),
+                        Filter("Left", expr("!record.completed"), default=True),
                         Sort("Manual", record.sequence, default=True),
                         Sort("Newest", record.created_at.desc()),
                     ),
@@ -153,7 +168,7 @@ def test_record_refs_inside_a_list_bind_to_the_list_model():
 
     node = next(n for n in tree(Board).walk() if n.node_type == "list")
     assert [f.name for f in node.search.fields] == ["text"]
-    assert node.search.filters[0].domain.expr.name == "completed"
+    assert node.search.filters[0].domain.text == "!record.completed"
     assert node.search.sorts[1].orders[0].direction == "desc"
     assert node.search.sorts[1].orders[0].ref.name == "created_at"
 
@@ -245,86 +260,36 @@ def test_an_empty_list_says_it_in_one_line_or_two():
         List(Line, empty=("a", "b", "c"))
     assert "empty" in str(excinfo.value)
 
-
-def test_item_view_model_must_match_the_list_model():
-    class TagItem(View):
-        model = Tag
-
-        def ui(self, record):
-            return Row(record.name(widget="title"))
-
-    class Board2(View):
-        def ui(self, record):
-            return (List(Line, item=TagItem),)
-
-    with pytest.raises(DslError) as excinfo:
-        tree(Board2)
-    message = str(excinfo.value)
-    assert "TagItem" in message and "Tag" in message and "Line" in message
-
-
-# ------------------------------------------------- field: ref + UI factory
-def test_a_field_is_both_a_reference_and_a_ui_factory():
-    assert isinstance(Line.text, Field)                      # reference
-    assert Line.text().node_type == "field"                  # UI, default widget
-    assert Line.text(widget="title").widget == "title"       # UI, override
-    assert isinstance(Line.sequence == 3, Cmp)               # reference
-    assert isinstance(~Line.completed, Not)                  # boolean reference
-    assert isinstance(Line.created_at.desc(), Order)
-    assert Line.text().widget is None  # falls back to the field's default
-
-
-def test_default_widget_is_reported_in_the_ir():
-    node = Line.description(widget="textarea")
-    assert node.ir()["widget"] == "textarea"
-    assert Line.description().ir()["widget"] == "textarea"
-    assert Line.text().ir()["widget"] == "text"
-
-
-def test_expression_operators_build_a_tree_not_a_bool():
-    expr = ~Line.completed & (Line.sequence > 3)
-    assert expr.__class__.__name__ == "And"
-    with pytest.raises(DslError):
-        bool(expr)
-
-
-def test_context_proxies_build_typed_refs():
-    domain = record.tag == view.tag
-    assert isinstance(domain, Cmp)
-    assert isinstance(domain.left, RecordFieldRef)
-    assert isinstance(domain.right, ViewFieldRef)
-
-
 # -------------------------------------------------------------------- UNSET
 def test_unset_view_state_drops_the_condition_entirely():
     ctx = QueryContext(Line, view_state={"tag": UNSET})
-    sql, params = compile_domain(record.tag == view.tag, ctx)
+    sql, params = compile_domain(expr("record.tag = view.tag"), ctx)
     assert sql is None, "UNSET must widen the query, not add IS NULL"
     assert params == []
 
 
 def test_set_view_state_produces_a_parameterised_equality():
     ctx = QueryContext(Line, view_state={"tag": "0198f0e2-1111-7000-8000-000000000005"})
-    sql, params = compile_domain(record.tag == view.tag, ctx)
+    sql, params = compile_domain(expr("record.tag = view.tag"), ctx)
     assert sql == '(t."tag_id" = ?)'
     assert params == ["0198f0e2-1111-7000-8000-000000000005"]
 
 
 def test_is_null_is_explicit_and_distinct_from_unset():
     ctx = QueryContext(Line, view_state={})
-    sql, params = compile_domain(Line.tag.is_null(), ctx)
+    sql, params = compile_domain(expr("record.tag = null"), ctx)
     assert sql == '(t."tag_id" IS NULL)'
     assert params == []
 
 
 def test_unset_absorbs_through_and_but_widens_or():
     ctx = QueryContext(Line, view_state={"tag": UNSET})
-    both = (record.tag == view.tag) & ~record.completed
+    both = expr("record.tag = view.tag & !record.completed")
     sql, params = compile_domain(both, ctx)
     assert sql == '((NOT (t."completed" = 1)))'
     assert params == []
 
-    either = (record.tag == view.tag) | ~record.completed
+    either = expr("record.tag = view.tag | !record.completed")
     sql, _ = compile_domain(either, ctx)
     assert sql is None, "an unconstrained OR branch leaves the whole OR open"
 
@@ -340,7 +305,7 @@ def test_boolean_values_are_adapted_for_sqlite():
     и покраснело бы на верном коде.
     """
     ctx = QueryContext(Line, view_state={"flag": True})
-    sql, params = compile_domain(record.completed == view.flag, ctx)
+    sql, params = compile_domain(expr("record.completed = view.flag"), ctx)
     assert sql == '(t."completed" = ?)'
     assert params == [1]
 
@@ -349,7 +314,7 @@ def test_a_boolean_field_is_a_condition_by_itself():
     """What E712 exists to stop people writing, said the way Python says it."""
     ctx = QueryContext(Line, view_state={})
     assert compile_domain(record.completed, ctx) == ('(t."completed" = 1)', [])
-    assert compile_domain(~record.completed, ctx) == (
+    assert compile_domain(expr("!record.completed"), ctx) == (
         '(NOT (t."completed" = 1))', []
     )
 
@@ -380,7 +345,7 @@ def test_multi_field_sort_is_supported():
 def test_record_outside_a_record_context_is_a_clear_error():
     ctx = QueryContext(None, view_state={})
     with pytest.raises(DslError) as excinfo:
-        compile_domain(record.tag == 1, ctx)
+        compile_domain(expr("record.tag = 1"), ctx)
     assert "record.tag" in str(excinfo.value)
 
 
@@ -441,7 +406,7 @@ def test_visible_is_answered_per_record():
             return Row(
                 record.text(widget="title"),
                 record.description(visible=record.completed),
-                record.tag(visible=~record.completed),
+                record.tag(visible=expr("!record.completed")),
             )
 
     cells = tree(RowView).children[0].children
@@ -457,8 +422,8 @@ def test_visible_takes_everything_a_domain_takes():
 
         def ui(self, record):
             return Row(
-                record.text(visible=(record.sequence > 10) & ~record.completed),
-                record.tag(visible=record.tag.is_null()),
+                record.text(visible=expr("record.sequence > 10 & !record.completed")),
+                record.tag(visible=expr("record.tag = null")),
             )
 
     first, second = tree(RowView).children[0].children

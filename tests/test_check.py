@@ -28,14 +28,15 @@ def _проверить(каталог, файл="app.py"):
     реестр моделей глобален, и два приложения в одном процессе пишут строки в
     классы друг друга. Тот же довод в ``test_build_db.py``.
     """
+    import shutil
+
+    узел = shutil.which("node")
+    if узел is None:
+        pytest.skip("node на этой машине нет")
     готово = subprocess.run(
-        [sys.executable, "-c",
-         "import sys; from oneframework.cli.main import main;"
-         " sys.argv = ['oneframework', 'check', sys.argv[1]]; sys.exit(main())",
-         str(каталог / файл)],
-        capture_output=True, text=True, encoding="utf-8", cwd=str(ROOT),
-        env={"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin"},
-    )
+        [узел, str(ROOT / "libs" / "js" / "bin" / "oneframework.mjs"),
+         "check", str(каталог / файл)],
+        capture_output=True, text=True, encoding="utf-8", cwd=str(ROOT))
     return готово.returncode, готово.stdout + готово.stderr
 
 

@@ -14,11 +14,11 @@ import json
 import pytest
 
 from oneframework import (
-    Accordion, App, Boolean, Button, Count, Delete, Exists, List, Many2one,
+    Accordion, App, Boolean, Button, Delete, List, Many2one,
     Menu, Model, Pill, Repeat, Row, String, Tab, Tabs, View,
 )
 from oneframework.errors import DslError
-from oneframework.model.expr import Expr, Ref, Template, item, iter_refs, parse_template
+from oneframework.model.expr import Expr, Ref, Template, expr, item, iter_refs, parse_template
 from oneframework.model.exprjson import from_json, to_json
 from oneframework.ui.view import document
 
@@ -51,31 +51,29 @@ class Boards(View):
                 Board,
                 Tab(
                     "{item.name}",
-                    Pill(Count(Task, (record.board == item.id) & ~record.done)),
+                    Pill(expr("count(Task, record.board = item.id & !record.done)")),
                     List(
                         Task,
                         item=TaskRow,
                         label="{item.name}",
-                        domain=(record.board == item.id) & ~record.done,
+                        domain=expr("record.board = item.id & !record.done"),
                         menu=Menu(
                             Button(
                                 "Удалить выполненные",
                                 action=Delete(
                                     Task,
-                                    domain=(record.board == item.id) & record.done,
+                                    domain=expr("record.board = item.id & record.done"),
                                     confirm="Удалить всё выполненное в «{item.name}»?",
                                 ),
-                                enabled=Exists(
-                                    Task, (record.board == item.id) & record.done
-                                ),
+                                enabled=expr("exists(Task, record.board = item.id & record.done)"),
                             ),
                         ),
                     ),
                     Accordion(
                         List(Task, item=TaskRow,
-                             domain=(record.board == item.id) & record.done),
+                             domain=expr("record.board = item.id & record.done")),
                         label="Выполненные",
-                        visible=Exists(Task, (record.board == item.id) & record.done),
+                        visible=expr("exists(Task, record.board = item.id & record.done)"),
                     ),
                 ),
             ),
@@ -123,7 +121,14 @@ def test_the_document_keeps_names_as_references():
 
 def test_the_document_carries_the_aggregate_and_not_its_value():
     """Число протухает от каждой правки задачи, объявление -- нет."""
-    tab = document(Boards)["children"][0]["children"][0]["children"][0]
+    # Спрашивается **план**: выражение объявлено строкой, а дерево из неё
+    # собирает сборка. В документе до сборки лежит строка, и это то же самое
+    # объявление -- но увидеть, что оно правда свёртка, можно только развернув.
+    from oneframework.cli.plan import build_plan
+
+    план = build_plan(_пакетом(App(Boards, title="Развороты")))
+    вид = next(д for в, и, д in план["defs"] if в == "view" and и == "Boards")
+    tab = вид["children"][0]["children"][0]["children"][0]
     accordion = tab["children"][1]
     assert accordion["visible"]["agg"] == "exists"
     assert accordion["visible"]["model"] == "Task"
@@ -139,7 +144,21 @@ def test_the_document_lands_in_the_database_beside_the_data():
 
     план = build_plan(_пакетом(App(Boards, title="Развороты")))
     поедет = {и: д for в, и, д in план["defs"] if в == "view"}
-    assert поедет.get("Boards") == document(Boards)
+    # Сверяются **имена и строение**, а не тела выражений: в документе они
+    # объявлены строкой, а план их разворачивает, и сравнивать одно с другим
+    # значило бы мерить работу разворота. Её сторожит
+    # `tests/js/expr-text-wire.test.mjs`.
+    def выражение(о):
+        return isinstance(о, dict) and (set(о) == {"text"} or "op" in о or "agg" in о)
+
+    def скелет(о):
+        if выражение(о):
+            return "<выражение>"
+        if isinstance(о, dict):
+            return {к: скелет(з) for к, з in о.items()}
+        return [скелет(э) for э in о] if isinstance(о, list) else о
+
+    assert скелет(поедет.get("Boards")) == скелет(document(Boards))
 
 
 def _пакетом(app, seed=None):

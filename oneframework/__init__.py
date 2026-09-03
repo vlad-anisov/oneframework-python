@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from .errors import DslError, OneFrameworkError, SchemaError, ValidationError
 from .device import OnDevice, action
-from .model.expr import UNSET, Count, Exists, item, record, view
+from .model.expr import UNSET, expr, item, record, view
 from .model.fields import (
     Binary,
     Boolean,
@@ -69,6 +69,7 @@ from .ui.view import View
 __version__ = "0.1.0"
 
 __all__ = [
+    "expr",
     # declarative core
     "Model",
     "View",
@@ -142,10 +143,8 @@ __all__ = [
     "Save",
     "Logic",
     # context proxies + sentinel
-    "Count",
     "OnDevice",
     "action",
-    "Exists",
     "record",
     "view",
     "item",

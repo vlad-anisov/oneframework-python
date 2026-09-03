@@ -173,11 +173,9 @@ def python_bundle(app_file: Path):
     ``Task`` есть в трёх примерах. Загрузи их в один процесс -- и связи начнут
     разрешаться в чужой класс, причём молча.
     """
-    out = subprocess.run(
-        [sys.executable, "-m", "oneframework.cli.main", "declare", str(app_file)],
-        capture_output=True, text=True, cwd=str(ROOT))
-    assert out.returncode == 0, f"{app_file}: {out.stderr}"
-    return json.loads(out.stdout)
+    from conftest import объявить
+
+    return объявить(app_file)
 
 
 @functools.lru_cache(maxsize=None)
@@ -202,11 +200,9 @@ def kotlin_ready():
 def kotlin_bundle():
     if not kotlin_ready():
         pytest.skip("компилятора Kotlin нет: KOTLIN_HOME не указан")
-    # Печатает пакет **ядро** (`libs/js/src/build/kotlin.mjs`): питоновской
-    # привязки Kotlin больше нет. Дорога та же, которой ходит сборка.
-    from oneframework.cli.sources import from_kotlin
+    from conftest import объявить
 
-    return from_kotlin(KOTLIN_APP).doc
+    return объявить(KOTLIN_APP)
 
 
 # --------------------------------------------------------------------------

@@ -118,28 +118,15 @@ class Field(Ref):
         #: поля нет намеренно: значение, положенное в колонку, стареет молча --
         #: подзадачу завершили, а готовность списка осталась вчерашней. Здесь
         #: значение спрашивается тогда, когда его рисуют, и потому не врёт.
-        self._compute = None
-        self._formula_fn = None
+        self.compute = None
         if compute is not None:
-            # Функцию передают саму собой -- `compute=_progress`. Ни декоратора,
-            # ни имени строкой: опечатку в строке нашёл бы рантайм, а тут её не
-            # бывает, и переход по имени работает как у обычной функции.
+            # Выражением -- `compute=expr("count(Task, via=board)")`. Обычным
+            # питоном формулу больше не пишут: чтобы получить из неё дерево, её
+            # приходилось **исполнять** с подставными объектами, и умел это
+            # только питон. Запись одна на все три языка.
             self.computed_by(compute)
         Field._counter += 1
         self._order = Field._counter
-
-    @property
-    def compute(self):
-        """Формула деревом. Прогоняется один раз, когда её впервые спросят."""
-        if self._compute is None and self._formula_fn is not None:
-            from .expr import trace_formula
-
-            self._compute = trace_formula(self._formula_fn, model=self.owner)
-        return self._compute
-
-    @compute.setter
-    def compute(self, value):
-        self._compute = value
 
     def computed_by(self, formula, name=None):  # noqa: D401
         """Поле считается формулой, а не хранится. Правило -- в одном месте.
@@ -150,15 +137,12 @@ class Field(Ref):
         том, что такое вычисляемое поле, и однажды они разойдутся.
         """
         if callable(formula):
-            # Прогон откладывается: в теле класса модели ещё нет, а формуле
-            # нужен `self`, знающий свои связи -- чтобы `self.tasks` было
-            # набором задач, а не просто именем. Считается один раз, при первом
-            # обращении, когда модель уже собрана.
-            name = name or getattr(formula, "__name__", None)
-            self._formula_fn = formula
-            formula = None
+            raise DslError(
+                "Формула пишется выражением, а не питоновской функцией: "
+                'compute=expr("count(Task, via=board)"). Питоновскую формулу '
+                "приходилось исполнять с подставными объектами, чтобы получить "
+                "дерево, -- и умел это один язык из трёх.")
         self.compute = formula
-        self.compute_name = name
         self.stored = False
         self.readonly = True
         return self

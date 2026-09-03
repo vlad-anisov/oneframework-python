@@ -150,12 +150,15 @@ def test_a_computed_field_has_no_column(app):
     # рабочими, и различает их тип: строка -- действие, словарь -- объявление.
     #: Колонку собирает тот компилятор, что на устройстве: объявление в поле
     #: питоновское, а переводит его в SQL он.
-    import types as _types
-
     from jsrel import call
-    from oneframework.model.schema import app_schema
 
-    call("load_models", app_schema(_types.SimpleNamespace(models=list(app.models))))
+    # Схема из **плана**, а не от классов: формула объявлена строкой, дерево из
+    # неё собирает ядро, и компилятору нужно именно дерево. Схема от классов
+    # отдала бы ему нерасшифрованную строку.
+    from oneframework.cli.plan import build_plan
+    from oneframework.declaration import Bundle, declare
+
+    call("load_models", build_plan(Bundle(declare(app)))["schema"])
     ответ = call("computed_columns_of", "Board", "t")
     assert dict(ответ["columns"]).keys() == {"progress"}
     assert not ответ["refused"]

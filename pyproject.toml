@@ -28,8 +28,9 @@ sync = ["apsw>=3.47"]
 sign = ["cryptography>=41"]
 dev = ["pytest>=8", "playwright>=1.40", "apsw>=3.47", "cryptography>=41"]
 
-[project.scripts]
-oneframework = "oneframework.cli.main:main"
+#: Своей команды у привязки нет: `oneframework dev|build|serve|check` живёт в
+#: ядре и одинаков для всех четырёх языков. Отсюда ядро зовёт одну дверь --
+#: `python -m oneframework declare`.
 
 [tool.setuptools.packages.find]
 include = ["oneframework*"]

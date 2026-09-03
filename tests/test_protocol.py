@@ -42,11 +42,11 @@ sys.path.insert(0, sys.argv[1])
 from pathlib import Path
 
 from oneframework.cli.plan import build_plan
-from oneframework.cli.sources import from_python
+from oneframework.__main__ import _приложение
 from oneframework.declaration import Bundle, declare
 from oneframework.model.schema import app_schema
 
-app = from_python(Path(sys.argv[2]))
+app = _приложение(Path(sys.argv[2]))
 bundle = Bundle(declare(app))
 # Схема -- **план**, а не DDL: таблицы заводит один `db.ensureSchema` на
 # стороне JS, и оба счёта обязаны привести к нему с одинаковым описанием.
@@ -119,8 +119,17 @@ def test_schema_from_a_bundle_matches_schema_from_classes(example):
     таблицы заводит одна -- `db.ensureSchema` на JS, -- и обе дороги теперь
     обязаны прийти к ней с одинаковым описанием.
     """
+    # Тело формулы меткой: питоновский счёт видит её строкой, а счёт из пакета
+    # -- развёрнутым деревом, и сверять их значило бы мерить работу разворота
+    # (она сторожится в `tests/js/expr-text-wire.test.mjs`). Наличие формулы
+    # сохраняется, поэтому потеря от нормализации не спрячется.
+    def без_тела(о):
+        if isinstance(о, dict):
+            return {к: ("<формула>" if к == "compute" else без_тела(з)) for к, з in о.items()}
+        return [без_тела(э) for э in о] if isinstance(о, list) else о
+
     собрано = collect(example)
-    assert собрано["schema_from_classes"] == собрано["schema_from_bundle"]
+    assert без_тела(собрано["schema_from_classes"]) == без_тела(собрано["schema_from_bundle"])
 
 
 @pytest.mark.parametrize("example", EXAMPLES)
