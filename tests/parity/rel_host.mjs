@@ -14,12 +14,10 @@
 import { createInterface } from "node:readline";
 
 import { compileQuery } from "../../libs/js/src/core/rel/domain.js";
-import { canonical, compileExpr, shape, aggSql } from "../../libs/js/src/core/rel/compile.js";
-import { computedColumns, declarationOf, modelsRead } from "../../libs/js/src/core/rel/fields.js";
-import { isDeclarative, isJs, isPython, isWasm } from "../../libs/js/src/core/rel/action.js";
+import { compileExpr } from "../../libs/js/src/core/rel/compile.js";
+import { computedColumns } from "../../libs/js/src/core/rel/fields.js";
 import { evaluate } from "../../libs/js/src/core/expr.js";
 import { makeModels } from "../../libs/js/src/core/runtime/fields.js";
-import { AccessPath, Mutation, compileRule, compileScreen } from "../../libs/js/src/core/rel/plan.js";
 import { развернутьТекст } from "../../libs/js/src/build/plan.mjs";
 
 /**
@@ -53,58 +51,12 @@ const ОПЕРАЦИИ = {
     return { sql: c.sql, params: c.params, status: c.status, form: c.form,
              missing: c.missing, reads: c.reads };
   },
-  canonical: (node) => canonical(развернуть(node)),
-  //: Строка -> дерево, тем же разборщиком, что и сборка. Отдельной операцией,
-  //: чтобы проверка могла спросить **какой род собрался**, а не только
-  //: «собралось ли»: род, названный в проверке и не сверенный с ответом,
-  //: сторожем не является.
   parse_expr: (текст) => развернуть({ text: текст }),
   //: Вычислить условие на записи -- то, чем устройство решает, рисовать ли
   //: узел. Питоновский вычислитель был вторым; правила спрашиваются у того,
   //: который правда решает.
   evaluate: (node, record, viewState) =>
     Boolean(evaluate(развернуть(node), { record: record || {}, view: viewState || {} })),
-  //: План выборки. По проводу едут поля, а не объекты: `AccessPath` и
-  //: `Compiled` -- объекты с методами, и питоновская сторона всё равно смотрит
-  //: только на то, что они рассказывают о себе.
-  compile_screen: (table, opts) => {
-    const o = opts || {};
-    const s = compileScreen(table, {
-      key: o.key || "id",
-      rowFields: o.row_fields || {},
-      aggregates: o.aggregates || [],
-      consumer: o.consumer || "screen",
-    });
-    return { sql: s.sql, params: s.params, fields: s.fields,
-             access: s.access.map((a) => a.asJson()), unsupported: s.unsupported };
-  },
-  compile_rule: (rule) => {
-    const { piece, access } = compileRule(rule);
-    return { sql: piece.sql, params: piece.params, status: piece.status,
-             form: piece.form, missing: piece.missing,
-             access: access.map((a) => a.asJson()) };
-  },
-  //: Правилу отдаётся уже напечатанный SQL, а не объявление: так устроен и
-  //: вызов в приложении -- правило печатается один раз, а правок по нему
-  //: может быть несколько.
-  mutation: (table, source, assignments, ruleSql) => {
-    const m = new Mutation(table, source, assignments);
-    return m.compile(ruleSql ?? null);
-  },
-  access_satisfied: (table, prefix, indexes) =>
-    new AccessPath(table, prefix, "check", "test").satisfiedBy(indexes),
-  shape: (node) => shape(node),
-  agg_sql: (kind, of, where, empty) => aggSql(kind, of, where, empty),
-  declaration_of: (field) => declarationOf(field),
-  models_read: (model) => modelsRead(model),
-  computed_columns: (model, alias, models) => computedColumns(model, alias ?? "t", models ?? null),
-  is_declarative: (doc) => isDeclarative(doc),
-  is_python: (doc) => isPython(doc),
-  is_wasm: (doc) => isWasm(doc),
-  is_js: (doc) => isJs(doc),
-  //: Описание моделей приезжает с питоновской стороны (`app_schema`): язык
-  //: объявления там и остаётся, а собирает модели тот же код, что на
-  //: устройстве.
   load_models: (appDoc) => { МОДЕЛИ = makeModels(appDoc); return Object.keys(МОДЕЛИ); },
   computed_columns_of: (name, alias) => {
     if (!МОДЕЛИ) throw new Error("Модели не загружены: сперва load_models");
