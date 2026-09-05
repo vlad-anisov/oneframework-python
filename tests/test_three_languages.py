@@ -49,7 +49,8 @@ PARITY_KT = ROOT / "tests" / "fixtures" / "ParityApp.kt"
 #: У JavaScript это тот же JSON. У Kotlin -- **исходник**: ресурс рядом с
 #: классами читает только JVM, а библиотека объявления собирается ещё и под
 #: WebAssembly, где никакого classpath нет.
-VENDORED = [ROOT / "libs" / "js" / "field-types.json"]
+VENDORED = [ROOT / "libs" / "js" / "field-types.json",
+            ROOT / "oneframework" / "field-types.json"]
 
 
 def fingerprints(bundle):

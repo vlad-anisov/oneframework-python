@@ -35,5 +35,10 @@ dev = ["pytest>=8", "playwright>=1.40", "apsw>=3.47", "cryptography>=41"]
 [tool.setuptools.packages.find]
 include = ["oneframework*"]
 
+#: Таблица типов едет **внутри** пакета: её читают классы полей при ввозе, и
+#: без неё установленный пакет не ввозится вовсе.
+[tool.setuptools.package-data]
+oneframework = ["field-types.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

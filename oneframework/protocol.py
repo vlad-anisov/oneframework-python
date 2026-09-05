@@ -21,10 +21,25 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-__all__ = ["system_fields", "table_name", "TABLE_PATH", "load"]
+__all__ = ["system_fields", "table_name", "TABLE_PATH", "SOURCE_PATH", "load"]
 
-#: Файл договора. Рядом с остальными -- `document.json`, `logic.json`, `wire.json`.
-TABLE_PATH = Path(__file__).resolve().parents[1] / "protocol" / "field-types.json"
+#: Копия таблицы **внутри пакета**, а не файл над ним.
+#:
+#: Читается она при ввозе: классы полей берут из неё колонку, виджет и
+#: умолчания. Значит она обязана ехать всюду, куда едет пакет, -- а
+#: `protocol/` в дереве фреймворка лежит рядом с пакетом, и после установки
+#: колесом или после раскола репозиториев его там нет. Ровно так пакет и
+#: перестал ввозиться: `pip install` давал `FileNotFoundError` на первом же
+#: `import oneframework`, и заметить это в монорепозитории было нечем.
+#:
+#: Так же поступают и соседи: у JavaScript копия лежит в корне библиотеки, у
+#: Kotlin таблица вкомпилирована в `FieldTypes.kt`. Совпадение копий с
+#: образцом сторожит `tests/test_three_languages.py`.
+TABLE_PATH = Path(__file__).resolve().parent / "field-types.json"
+
+#: Образец, из которого копия берётся. В установленном пакете его нет -- он
+#: нужен только сторожу и тому, кто правит таблицу.
+SOURCE_PATH = Path(__file__).resolve().parents[1] / "protocol" / "field-types.json"
 
 #: Версия договора. Растёт, когда меняется **форма** таблицы, а не её
 #: содержимое: новый тип поля версию не двигает, новый ключ у типа -- двигает.
