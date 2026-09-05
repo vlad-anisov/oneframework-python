@@ -4,6 +4,8 @@ import textwrap
 
 import pytest
 
+from conftest import нужно_ядро
+
 from oneframework import String, discover, load_all
 from oneframework.errors import OneFrameworkError
 from oneframework.modules import MODULES
@@ -177,6 +179,7 @@ def test_module_screen_declares_label_and_icon(tmp_path):
     ]
 
 
+@нужно_ядро
 def test_each_module_seeds_independently(tmp_path):
     """Adding a module later seeds only the new one."""
     from oneframework import App
@@ -210,6 +213,7 @@ def test_each_module_seeds_independently(tmp_path):
     assert посеяно[0]["name"] == "from alpha"
 
 
+@нужно_ядро
 def test_an_existing_install_does_not_reseed_after_a_marker_rename(tmp_path):
     """Upgrading the framework must not duplicate demo data."""
     from oneframework import App
@@ -224,6 +228,7 @@ def test_an_existing_install_does_not_reseed_after_a_marker_rename(tmp_path):
     assert "seeded:legacy" in посев["also"], посев
 
 
+@нужно_ядро
 def test_logic_declared_as_a_compiled_module_refuses_by_name(tmp_path):
     """Форма ``LOGIC = [{"module": ...}]`` объявлена, но не работает.
 

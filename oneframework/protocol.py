@@ -13,7 +13,7 @@
 
 Поэтому знание одно и лежит **данными**: ``protocol/field-types.json``. Читают
 его все три привязки, и никто не порождает: порождай одна -- завести тип поля
-можно было бы только её правкой. Состав сторожит ``tests/test_protocol.py``.
+можно было бы только её правкой. Состав сторожит ``tests/together/test_protocol.py``.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ __all__ = ["system_fields", "table_name", "TABLE_PATH", "SOURCE_PATH", "load"]
 #:
 #: Так же поступают и соседи: у JavaScript копия лежит в корне библиотеки, у
 #: Kotlin таблица вкомпилирована в `FieldTypes.kt`. Совпадение копий с
-#: образцом сторожит `tests/test_three_languages.py`.
+#: образцом сторожит `tests/together/test_three_languages.py`.
 TABLE_PATH = Path(__file__).resolve().parent / "field-types.json"
 
 #: Образец, из которого копия берётся. В установленном пакете его нет -- он

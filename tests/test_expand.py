@@ -13,6 +13,8 @@ import json
 
 import pytest
 
+from conftest import нужно_ядро
+
 from oneframework import (
     Accordion, App, Boolean, Button, Delete, List, Many2one,
     Menu, Model, Pill, Repeat, Row, String, Tab, Tabs, View,
@@ -119,6 +121,7 @@ def test_the_document_keeps_names_as_references():
     assert tab["label"] == {"fmt": [{"i": "name"}]}
 
 
+@нужно_ядро
 def test_the_document_carries_the_aggregate_and_not_its_value():
     """Число протухает от каждой правки задачи, объявление -- нет."""
     # Спрашивается **план**: выражение объявлено строкой, а дерево из неё
@@ -134,6 +137,7 @@ def test_the_document_carries_the_aggregate_and_not_its_value():
     assert accordion["visible"]["model"] == "Task"
 
 
+@нужно_ядро
 def test_the_document_lands_in_the_database_beside_the_data():
     """Документ вида кладётся в базу выкладкой -- рантайм тут ни при чём.
 

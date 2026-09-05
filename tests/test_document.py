@@ -29,12 +29,19 @@ from pathlib import Path
 
 import pytest
 
+from conftest import нужно_ядро
+
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = json.loads((ROOT / "protocol" / "document.json").read_text(encoding="utf-8"))
 ACTION_TYPES = frozenset(SCHEMA["actions"])
 NODE_TYPES = frozenset(SCHEMA["nodes"])
 
-EXAMPLES = ("gtasks", "kitchen", "modular")
+#: Образцы, чьи документы проверяются. Свои, а не витринные примеры:
+#: `parity_app` нарочно задевает **все семнадцать** родов узлов, а gtasks с
+#: kitchen задевали шесть. Проверка от этого стала строже, а привязка --
+#: проверяемой у себя дома: витрина живёт в отдельном репозитории, и сюита,
+#: которая её требует, там, где привязку издают, не запускается вовсе.
+ОБРАЗЦЫ = ("parity_app", "document_app")
 
 
 #: Сбор документов идёт отдельным процессом на каждый пример.
@@ -48,7 +55,7 @@ import json, sys
 sys.path.insert(0, sys.argv[1])
 sys.path.insert(0, sys.argv[2])
 from oneframework.ui.view import document
-app = __import__("app").app
+app = __import__(sys.argv[3]).app
 # Без try: молча пропущенный вид -- ровно та ошибка, которую этот файл ловит.
 # publish_views глотает TypeError, и один неверный ir() однажды уже увёл три
 # вида из выкладки, ничего не сказав.
@@ -59,9 +66,10 @@ print(json.dumps([[v.__name__, document(v)] for v in app.views], ensure_ascii=Fa
 def _documents():
     """``(пример, имя вида, документ)`` для каждого вида каждого примера."""
     out = []
-    for example in EXAMPLES:
+    for example in ОБРАЗЦЫ:
         proc = subprocess.run(
-            [sys.executable, "-c", _COLLECT, str(ROOT), str(ROOT / "examples" / example)],
+            [sys.executable, "-c", _COLLECT, str(ROOT),
+             str(ROOT / "tests" / "fixtures"), example],
             capture_output=True, text=True, cwd=str(ROOT),
         )
         assert proc.returncode == 0, f"{example}: {proc.stderr}"
@@ -96,11 +104,26 @@ def typed(kind):
 # схема
 # --------------------------------------------------------------------------
 def test_examples_produce_documents():
-    """Каждый вид примеров -- документ. Ни одного молчаливого пропуска."""
-    assert len(DOCUMENTS) >= 29
+    """Каждый вид образца -- документ. Ни одного молчаливого пропуска."""
+    assert DOCUMENTS, "образцы не дали ни одного документа -- сбор сломан"
+    # Каждый образец обязан вложиться: молча выпавший унёс бы с собой то
+    # единственное свойство, ради которого заведён.
+    assert {и for и, _, _ in DOCUMENTS} == set(ОБРАЗЦЫ)
     for _example, name, doc in DOCUMENTS:
         assert doc["type"] == "view", name
         assert doc["name"] == name
+
+    # Широта -- родами узлов, а не числом документов. Число ничего не говорит:
+    # тридцать однообразных карточек его набирают, а договор не задевают.
+    роды = set()
+    def обойти(узел):
+        if isinstance(узел, dict):
+            if "type" in узел: роды.add(узел["type"])
+            for з in узел.values(): обойти(з)
+        elif isinstance(узел, list):
+            for э in узел: обойти(э)
+    обойти([d for _e, _n, d in DOCUMENTS])
+    assert len(роды) >= 12, f"образцы задевают только {sorted(роды)}"
 
 
 def test_every_node_type_is_described():
@@ -225,11 +248,13 @@ def test_views_still_holding_code_are_counted_not_hidden():
     пересчитаны -- это и есть отчёт о том, где переезд.
     """
     holding = [n for _e, n, d in DOCUMENTS if d["title_is_code"]]
-    # Ровно один на сегодня: BoardCard из gtasks, у него `_title` -- функция от
-    # записи («Создать список» / «Переименовать список»).
-    assert holding == ["BoardCard"], holding
+    # Ровно один, и он заведён ради этой проверки: `Карточка` в
+    # `tests/fixtures/document_app.py`, у неё `_title` -- функция от записи
+    # («Новая заметка» / «Правка заметки»).
+    assert holding == ["Карточка"], holding
 
 
+@нужно_ядро
 def test_nothing_is_skipped_silently():
     """У примеров все виды обязаны публиковаться.
 
@@ -251,15 +276,16 @@ from oneframework.model.defs import SKIPPED
 
 # Что поедет в базу -- это **план**: пропуск вида решается при сборке
 # документов, а не при записи, и спрашивать надо там же.
-app = __import__("app").app
+app = __import__(sys.argv[3]).app
 план = план(Bundle(declare(app)))
 print(json.dumps({"skipped": SKIPPED,
                   "published": [и for в, и, _ in план["defs"] if в == "view"],
                   "declared": [v.__name__ for v in app.views]}, ensure_ascii=False))
 """
-    for example in EXAMPLES:
+    for example in ОБРАЗЦЫ:
         proc = subprocess.run(
-            [sys.executable, "-c", script, str(ROOT), str(ROOT / "examples" / example)],
+            [sys.executable, "-c", script, str(ROOT),
+             str(ROOT / "tests" / "fixtures"), example],
             capture_output=True, text=True, cwd=str(ROOT),
         )
         assert proc.returncode == 0, f"{example}: {proc.stderr}"
@@ -269,10 +295,10 @@ print(json.dumps({"skipped": SKIPPED,
 
 
 def test_state_fields_carry_their_type():
-    drafts = [d for _e, n, d in DOCUMENTS if n == "TaskDraftCard"]
-    assert drafts
+    drafts = [d for _e, n, d in DOCUMENTS if n == "Черновик"]
+    assert drafts, "образец с состоянием вида не собрался"
     state = {f["name"]: f["ftype"] for f in drafts[0]["state"]}
-    assert state == {"details_shown": "boolean", "date_shown": "boolean"}
+    assert state == {"body_shown": "boolean", "done_shown": "boolean"}
 
 
 # ==========================================================================

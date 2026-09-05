@@ -8,6 +8,8 @@
 
 import pytest
 
+from conftest import нужно_ядро
+
 from oneframework import App, Boolean, List, Model, Row, Screen, String, View
 from oneframework.errors import DslError
 from jsrt import Рантайм, needs_node
@@ -74,6 +76,7 @@ def test_sequence_overrides_declaration_order():
 
 
 @needs_node
+@нужно_ядро
 def test_meta_exposes_screens(app):
     """`meta()` -- то, что оболочка читает до базы, и раскладку она уже знает.
 
