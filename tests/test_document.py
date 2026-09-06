@@ -198,7 +198,7 @@ sys.path.insert(0, sys.argv[1]); sys.path.insert(0, sys.argv[2])
 import os; sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))
 from conftest import план
 from oneframework.declaration import Bundle, declare
-from oneframework.model.defs import SKIPPED
+from oneframework.model.skipped import SKIPPED
 
 # Что поедет в базу -- это **план**: пропуск вида решается при сборке
 # документов, а не при записи, и спрашивать надо там же.
@@ -225,51 +225,8 @@ def test_state_fields_carry_their_type():
     state = {f["name"]: f["ftype"] for f in drafts[0]["state"]}
     assert state == {"body_shown": "boolean", "done_shown": "boolean"}
 
-# --- рубеж: документ, не сходящийся с договором, до базы не доходит ----------
-def test_a_document_that_breaks_the_contract_is_refused():
-    from oneframework.model.defs import view_defs
-    from oneframework.ui.nodes import Node
-    from oneframework.ui.view import View
-
-    class Чужой(View):
-        def ui(self, record):
-            return ()
-
-    целый = {"type": "view", "name": "X", "children": [], "crumbs": None,
-             "dismiss": None, "model": None, "state": [], "title": "X",
-             "title_is_code": False}
-    from oneframework.model import docschema
-
-    assert docschema.problems(целый) == [], "целый документ не прошёл"
-    чужой = {**целый, "children": [{"type": "нетакого", "id": "n1"}]}
-    беды = docschema.problems(чужой)
-    assert беды and any("нетакого" in б for б in беды), беды
-
-    #: И то же самое на настоящей выкладке: подменяем документ вида и смотрим,
-    #: что она отказывает, а не кладёт молча.
-    import oneframework.ui.view as вид_модуль
-
-    настоящий = вид_модуль.document
-    вид_модуль.document = lambda cls: чужой
-    try:
-        with pytest.raises(ValueError, match="нетакого"):
-            view_defs([Чужой])
-    finally:
-        вид_модуль.document = настоящий
-
-def test_the_gate_measures_actions_by_their_own_table():
-    """Действия договор описывает порознь, и различает их место, а не тип."""
-    from oneframework.model.docschema import problems
-
-    целый = {"type": "view", "name": "X", "children": [], "crumbs": None,
-             "dismiss": None, "model": None, "state": [], "title": "X",
-             "title_is_code": False}
-    сдействием = {**целый, "children": [
-        {"type": "button", "id": "b1", "label": "Удалить", "icon": None,
-         "place": None, "style": None, "visible": True, "enabled": True,
-         "action": {"type": "delete", "model": "Task"}},
-    ]}
-    # Действие `delete` есть в `actions` и его нет в `nodes` -- значит рубеж,
-    # меряющий его правильным словарём, к нему по типу не придерётся.
-    беды = problems(сдействием)
-    assert not [б for б in беды if "delete" in б and "неизвестен" in б]
+#: Рубеж на форме документа уехал в ядро: он один на все три языка и стоит
+#: на дороге сборки -- `libs/js/src/build/docschema.mjs`, сторож при нём
+#: `tests/js/docschema.test.mjs`. Здесь он стоял на дороге, которой продукт
+#: не ездит: его звал `view_defs`, второй писатель определений, -- и форма
+#: документа не сверялась нигде на дороге, которая вправду ездит.

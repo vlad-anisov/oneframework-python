@@ -65,7 +65,7 @@ def declare(доводы) -> int:
     (куда / "добавка.json").write_text(
         json.dumps(_добавка(app), ensure_ascii=False), encoding="utf-8")
 
-    from .model.defs import SKIPPED
+    from .model.skipped import SKIPPED
 
     if SKIPPED:
         (куда / "пропуски.json").write_text(
@@ -73,7 +73,7 @@ def declare(доводы) -> int:
             encoding="utf-8")
 
     if доводы.root:
-        from .cli import python_runtime
+        from . import python_runtime
 
         опись = python_runtime.vendor(Path(доводы.root),
                                       getattr(app, "python_packages", []))

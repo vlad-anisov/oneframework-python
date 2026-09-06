@@ -5,12 +5,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-__all__ = ["system_fields", "table_name", "TABLE_PATH", "SOURCE_PATH", "load"]
+__all__ = ["system_fields", "table_name", "TABLE_PATH", "load"]
 
 #: Копия таблицы **внутри пакета**, а не файл над ним.
 TABLE_PATH = Path(__file__).resolve().parent / "field-types.json"
 
-SOURCE_PATH = Path(__file__).resolve().parents[1] / "protocol" / "field-types.json"
 
 VERSION = 1
 

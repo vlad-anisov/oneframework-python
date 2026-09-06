@@ -6,7 +6,6 @@ from conftest import нужно_ядро
 
 from oneframework import App, Boolean, List, Model, Row, Screen, String, View
 from oneframework.errors import DslError
-from jsrt import Рантайм, needs_node
 
 class Note(Model):
     title = String("Title", required=True)
@@ -58,18 +57,8 @@ def test_sequence_overrides_declaration_order():
     a = App(Screen(People, sequence=20), Screen(Notes, sequence=10), title="Ordered")
     assert [s.key for s in a.screens] == ["Notes", "People"]
 
-@needs_node
-@нужно_ядро
-def test_meta_exposes_screens(app):
-    """`meta()` -- то, что оболочка читает до базы, и раскладку она уже знает."""
-    рт = Рантайм(app)
-    try:
-        assert app.meta()["screens"][1] == {
-            "key": "People", "label": "Люди", "icon": "people", "view": "People",
-            "master_detail": True,
-        }
-    finally:
-        рт.close()
+#: `meta()` против настоящего рантайма уехал в `tests/together/`: ему
+#: нужны обе стороны -- привязка и ядро, -- а здесь он только спал.
 
 def test_a_bare_view_is_one_screen():
     a = App(Notes, title="Solo")

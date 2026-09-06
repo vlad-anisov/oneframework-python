@@ -18,7 +18,7 @@ class DeclarationError(OneFrameworkError):
 # --- питон -> пакет ----------------------------------------------------------
 def declare(app, seed=None) -> dict:
     """``App`` -> пакет объявления."""
-    from .model.defs import SKIPPED
+    from .model.skipped import SKIPPED
     from .model.schema import model_schema, type_schema
     from .ui.view import document
 
@@ -208,10 +208,10 @@ class Bundle:
 
     # -- сборка -----------------------------------------------------------
     # Пакет в базу выкладывает сборщик (`libs/js/src/build-db.mjs`) по плану от
-    # `cli/plan.py`: у пакета и у приложения на питоне дорога одна.
+    # план считает ядро: у пакета и у приложения на питоне дорога одна.
 
     #: Таблицы заводит одна реализация -- `db.ensureSchema` на устройстве, а
-    #: пакет отдаёт ей то же описание, что и приложение (`cli/plan.py`).
+    #: пакет отдаёт то же описание, что и приложение.
 
     def __repr__(self):
         откуда = f" из {self.source}" if self.source else ""

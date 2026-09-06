@@ -8,7 +8,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 
-КОМАНДА = ROOT / "libs" / "js" / "bin" / "oneframework.mjs"
+КОМАНДА = ROOT / "bin" / "oneframework.mjs"
 
 #: Ядро зовётся отсюда, а не из привязки.
 def _ядро(*части) -> Path:
