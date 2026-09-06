@@ -7,7 +7,6 @@ ROWS = [
     ("Четыре", True, 0, "2026-03-01"),
 ]
 
-
 def seed(db):
     for title, done, rank, due in ROWS:
         db.create(Memo, {"title": title, "done": done, "rank": rank, "due": due})

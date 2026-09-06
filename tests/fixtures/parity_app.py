@@ -1,19 +1,4 @@
-"""Приложение, объявленное **на питоне**, ради сверки привязок.
-
-Смысл у него один: задеть каждый род узла и каждое умолчание, которое у двух
-привязок может разойтись. Приложением его никто не запускает -- это образец, а
-не пример, и потому он живёт в `tests/`, а не в `examples/`.
-
-Зачем он понадобился. Пятьдесят две проверки правил объявления приложены к
-питоновской привязке. Другие держались сверкой документов
-(`test_three_languages.py`), а та сверяет тройку `notes-*` -- модель, строка,
-карточка, кнопка. После того как привязка на JavaScript догнала питоновскую по
-составу узлов, сверять её стало нечем: богатого приложения, объявленного
-дважды, не было.
-
-Близнец -- `tests/fixtures/parity_app.mjs`. Совпадение сторожит
-`tests/js/binding-parity.test.mjs`.
-"""
+"""Приложение, объявленное **на питоне**, ради сверки привязок."""
 
 from oneframework import (
     Accordion, App, Boolean, Button, Col, Color, Create, Date, Datetime,
@@ -23,12 +8,10 @@ from oneframework import (
 )
 from oneframework.model.expr import item
 
-
 class Полка(Model):
     _table = "полка"
     name = String("Название", required=True)
     color = Color("Цвет")
-
 
 class Книга(Model):
     _table = "книга"
@@ -45,7 +28,6 @@ class Книга(Model):
     opened = Datetime("Открыта")
     alarm = Time("Напоминание")
 
-
 class Строка(View):
     model = Книга
 
@@ -57,7 +39,6 @@ class Строка(View):
             record.shelf(widget="tag"),
             Button(icon="delete", action=record.delete()),
         )
-
 
 class Карточка(View):
     model = Книга
@@ -82,7 +63,6 @@ class Карточка(View):
             Button("Сохранить", action=Save()),
             Button("Удалить", action=record.delete()),
         )
-
 
 class Полки(View):
     _title = "Полки"
@@ -142,6 +122,5 @@ class Полки(View):
                 page=True,
             ),
         )
-
 
 app = App(Screen(Полки, label="Полки", icon="shelves"), title="Полки")

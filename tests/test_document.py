@@ -1,25 +1,7 @@
 """Соответствие: документ вида как формат.
 
-Провод закреплён ``protocol/wire.json`` и ``tests/js/wire.test.mjs``. Документ --
-второй формат, который уезжает по сети, и до сих пор он не был описан нигде.
-Разница между ними существенная, а не версионная:
-
-* **снимок** несёт разрешённые значения -- «вот эти строки, вот это число»;
-* **документ** несёт объявления -- «вот по какому домену строки брать».
-
-Поэтому у документа своя схема и свой тест, а не флаг в чужом.
-
-Два правила держат весь файл:
-
-* каждый узел и каждое действие документа перечислены в схеме -- с ключами,
-  которые они обязаны нести;
-* объявление обязано быть на месте: у списка -- домен, у фильтра -- домен, у
-  сортировки -- порядок, у действия -- то, над чем оно совершается.
-
-Второе правило проверяется обходом **всего** документа, а не тех узлов, что
-вспомнились. Дыра, которую этот файл заводился ловить, выглядела именно так:
-документ описывал форму экрана и молчал о поведении, и никто этого не замечал,
-потому что по документу ещё ни разу не рисовали.
+Провод закреплён ``protocol/wire.json`` и ``tests/js/wire.test.mjs``; документ --
+второй формат, который уезжает по сети, и сторожится он здесь.
 """
 
 import json
@@ -36,20 +18,8 @@ SCHEMA = json.loads((ROOT / "protocol" / "document.json").read_text(encoding="ut
 ACTION_TYPES = frozenset(SCHEMA["actions"])
 NODE_TYPES = frozenset(SCHEMA["nodes"])
 
-#: Образцы, чьи документы проверяются. Свои, а не витринные примеры:
-#: `parity_app` нарочно задевает **все семнадцать** родов узлов, а gtasks с
-#: kitchen задевали шесть. Проверка от этого стала строже, а привязка --
-#: проверяемой у себя дома: витрина живёт в отдельном репозитории, и сюита,
-#: которая её требует, там, где привязку издают, не запускается вовсе.
 ОБРАЗЦЫ = ("parity_app", "document_app")
 
-
-#: Сбор документов идёт отдельным процессом на каждый пример.
-#:
-#: Не из осторожности: реестр моделей глобален и ключуется именем класса, а
-#: ``Task`` есть в трёх примерах из четырёх. Загрузи их в один процесс -- и
-#: связи начнут разрешаться в чужой класс, причём молча. Тот же самый довод
-#: записан в ``App._defined_in``, и здесь он ровно про то же.
 _COLLECT = r"""
 import json, sys
 sys.path.insert(0, sys.argv[1])
@@ -61,7 +31,6 @@ app = __import__(sys.argv[3]).app
 # вида из выкладки, ничего не сказав.
 print(json.dumps([[v.__name__, document(v)] for v in app.views], ensure_ascii=False))
 """
-
 
 def _documents():
     """``(пример, имя вида, документ)`` для каждого вида каждого примера."""
@@ -77,9 +46,7 @@ def _documents():
             out.append((example, name, doc))
     return out
 
-
 DOCUMENTS = _documents()
-
 
 def walk(node):
     """Каждый словарь документа, у которого есть ``type``."""
@@ -92,17 +59,13 @@ def walk(node):
         for value in node:
             yield from walk(value)
 
-
 def typed(kind):
     for _example, _view, doc in DOCUMENTS:
         for node in walk(doc):
             if node.get("type") == kind:
                 yield node
 
-
-# --------------------------------------------------------------------------
-# схема
-# --------------------------------------------------------------------------
+# --- схема -------------------------------------------------------------------
 def test_examples_produce_documents():
     """Каждый вид образца -- документ. Ни одного молчаливого пропуска."""
     assert DOCUMENTS, "образцы не дали ни одного документа -- сбор сломан"
@@ -113,8 +76,7 @@ def test_examples_produce_documents():
         assert doc["type"] == "view", name
         assert doc["name"] == name
 
-    # Широта -- родами узлов, а не числом документов. Число ничего не говорит:
-    # тридцать однообразных карточек его набирают, а договор не задевают.
+    # Широта -- родами узлов, а не числом документов.
     роды = set()
     def обойти(узел):
         if isinstance(узел, dict):
@@ -125,7 +87,6 @@ def test_examples_produce_documents():
     обойти([d for _e, _n, d in DOCUMENTS])
     assert len(роды) >= 12, f"образцы задевают только {sorted(роды)}"
 
-
 def test_every_node_type_is_described():
     """Новый тип узла без правки схемы роняет тест -- в этом и смысл."""
     seen = {
@@ -135,7 +96,6 @@ def test_every_node_type_is_described():
         if node["type"] not in ACTION_TYPES
     }
     assert seen <= NODE_TYPES, f"нет в схеме: {sorted(seen - NODE_TYPES)}"
-
 
 def test_every_action_type_is_described():
     seen = {n["type"] for _e, _v, doc in DOCUMENTS for n in walk(doc)} & ACTION_TYPES
@@ -148,7 +108,6 @@ def test_every_action_type_is_described():
     assert not unknown
     assert seen  # действия в примерах есть, иначе тест ничего не проверяет
 
-
 @pytest.mark.parametrize("kind", sorted(NODE_TYPES))
 def test_node_carries_its_required_keys(kind):
     spec = SCHEMA["nodes"][kind]
@@ -159,7 +118,6 @@ def test_node_carries_its_required_keys(kind):
         extra = set(node) - allowed
         assert not extra, f"{kind}: ключи вне схемы {sorted(extra)}"
 
-
 @pytest.mark.parametrize("kind", sorted(ACTION_TYPES))
 def test_action_carries_its_required_keys(kind):
     spec = SCHEMA["actions"][kind]
@@ -169,14 +127,11 @@ def test_action_carries_its_required_keys(kind):
         assert not missing, f"{kind}: нет ключей {sorted(missing)}"
         assert not set(node) - allowed
 
-
 # --------------------------------------------------------------------------
 # полнота: объявление обязано быть на месте
 # --------------------------------------------------------------------------
 # Ключ обязан присутствовать, а значение может быть пустым: список без домена
-# показывает всё, и это законный ответ. Проверяется именно наличие объявления --
-# отсутствие ключа означает, что вопрос потерян, а не что ответ «всё».
-
+# показывает всё, и это законный ответ.
 
 def test_every_list_declares_its_query():
     lists = list(typed("list"))
@@ -185,11 +140,9 @@ def test_every_list_declares_its_query():
         assert "domain" in node, f"список {node['id']} не говорит, что показывать"
         assert "order" in node, f"список {node['id']} не говорит, в каком порядке"
 
-
 def test_every_filter_declares_its_domain():
     for node in typed("filter"):
         assert "domain" in node, f"фильтр {node['id']} ничего не отбирает"
-
 
 def test_every_sort_declares_its_order():
     sorts = list(typed("sort"))
@@ -197,18 +150,15 @@ def test_every_sort_declares_its_order():
     for node in sorts:
         assert node.get("orders"), f"сортировка {node['id']} ничем не сортирует"
 
-
 def test_every_repeat_declares_its_model():
     for node in typed("repeat"):
         assert node.get("model"), "повторитель без модели -- пустое место"
-
 
 def test_delete_declares_what_it_removes():
     """``Delete(Board, item.id)``, ``Task.search(...).delete()`` и голый
     ``Delete()`` обязаны различаться в документе: делают они разное."""
     for node in typed("delete"):
         assert "model" in node and "record_id" in node and "domain" in node
-
 
 def test_open_and_create_declare_their_target():
     for node in typed("open"):
@@ -218,19 +168,11 @@ def test_open_and_create_declare_their_target():
         assert node.get("model"), "Create без модели нечего создавать"
         assert "values" in node and "draft" in node and "target" in node
 
-
 def test_set_declares_field_and_scope():
     for node in typed("set"):
         assert node.get("field") and node.get("scope") in ("record", "view")
 
-
 def test_view_declares_its_own_metadata():
-    """Заголовок, поведение кнопки «назад» и состояние экрана.
-
-    Состояние особенно: `view.tag`, упомянутый только в домене, ни одним узлом
-    в дереве не представлен, и без этого списка рантайм не узнал бы даже, что
-    такое поле есть.
-    """
     for _example, name, doc in DOCUMENTS:
         assert doc["dismiss"] in ("auto", "back", "close"), name
         assert isinstance(doc["state"], list), name
@@ -239,33 +181,17 @@ def test_view_declares_its_own_metadata():
         if doc["title_is_code"]:
             assert doc["title"] is None, name
 
-
 def test_views_still_holding_code_are_counted_not_hidden():
-    """Вид с заголовком-функцией -- ещё программа, и документ говорит об этом.
-
-    Молчаливая потеря заголовка была бы худшим из исходов: экран уехал бы без
-    имени, и причина не нашлась бы нигде. Пока такие виды есть, они обязаны быть
-    пересчитаны -- это и есть отчёт о том, где переезд.
-    """
+    """Вид с заголовком-функцией -- ещё программа, и документ говорит об этом."""
     holding = [n for _e, n, d in DOCUMENTS if d["title_is_code"]]
     # Ровно один, и он заведён ради этой проверки: `Карточка` в
     # `tests/fixtures/document_app.py`, у неё `_title` -- функция от записи
     # («Новая заметка» / «Правка заметки»).
     assert holding == ["Карточка"], holding
 
-
 @нужно_ядро
 def test_nothing_is_skipped_silently():
-    """У примеров все виды обязаны публиковаться.
-
-    ``publish_views`` ловит любое исключение -- иначе один непереехавший вид
-    ронял бы чужое приложение на запуске. Цена этой терпимости -- что поломка
-    фреймворка выглядит как «вид ещё программа»: опечатка в сигнатуре ``ir()``
-    однажды увела три вида из выкладки, не сказав ни слова.
-
-    Здесь эта цена и возвращается: пропуск записан с причиной, и у примеров
-    список обязан быть пуст.
-    """
+    """У примеров все виды обязаны публиковаться."""
     script = r"""
 import json, sys, tempfile
 sys.path.insert(0, sys.argv[1]); sys.path.insert(0, sys.argv[2])
@@ -293,33 +219,18 @@ print(json.dumps({"skipped": SKIPPED,
         assert report["skipped"] == {}, f"{example}: пропущены {report['skipped']}"
         assert sorted(report["published"]) == sorted(report["declared"]), example
 
-
 def test_state_fields_carry_their_type():
     drafts = [d for _e, n, d in DOCUMENTS if n == "Черновик"]
     assert drafts, "образец с состоянием вида не собрался"
     state = {f["name"]: f["ftype"] for f in drafts[0]["state"]}
     assert state == {"body_shown": "boolean", "done_shown": "boolean"}
 
-
-# ==========================================================================
-# рубеж: документ, не сходящийся с договором, до базы не доходит
-# ==========================================================================
+# --- рубеж: документ, не сходящийся с договором, до базы не доходит ----------
 def test_a_document_that_breaks_the_contract_is_refused():
-    """Определение -- исполняемая настройка, и форму её никто не проверял.
-
-    ``put()`` принимала любой словарь: он ложился в ``_oneframework_def`` и
-    уезжал обменом. Подпись издателя отвечает за то, *кто* прислал, а не за
-    то, *что* прислано. Узел, которого отрисовка не знает, на устройстве
-    выглядит пустым местом вместо части экрана -- и молчит.
-
-    Нашёл разбор со стороны.
-    """
     from oneframework.model.defs import view_defs
     from oneframework.ui.nodes import Node
     from oneframework.ui.view import View
 
-    #: Вид, чей документ несёт узел, которого договор не знает. Проверяется
-    #: **выкладка**, а не запись: рубеж переехал туда вместе с ней.
     class Чужой(View):
         def ui(self, record):
             return ()
@@ -346,13 +257,8 @@ def test_a_document_that_breaks_the_contract_is_refused():
     finally:
         вид_модуль.document = настоящий
 
-
 def test_the_gate_measures_actions_by_their_own_table():
-    """Действия договор описывает порознь, и различает их место, а не тип.
-
-    Первая редакция рубежа мерила действия формами узлов -- и объявила
-    расхождением все 29 видов всех примеров. Проверка держит это различие.
-    """
+    """Действия договор описывает порознь, и различает их место, а не тип."""
     from oneframework.model.docschema import problems
 
     целый = {"type": "view", "name": "X", "children": [], "crumbs": None,

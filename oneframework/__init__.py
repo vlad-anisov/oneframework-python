@@ -1,20 +1,4 @@
-"""oneframework -- write a local-first Web/PWA/Android app in declarative Python.
-
-    from oneframework import *
-
-    class Tag(Model):
-        name = String("Name", required=True)
-        color = Color("Color")
-
-    class Todo(View):
-        ui = (List(Tag),)
-
-    app = App(Todo)
-
-Everything exported here is public API. Runtime internals (nodes, signals, the
-SQL compiler) stay importable from their submodules but are
-deliberately kept out of ``import *``.
-"""
+"""oneframework -- write a local-first Web/PWA/Android app in declarative Python."""
 
 from __future__ import annotations
 
@@ -70,17 +54,14 @@ __version__ = "0.1.0"
 
 __all__ = [
     "expr",
-    # declarative core
     "Model",
     "View",
     "App",
     "Screen",
-    # modules
     "load_all",
     "discover",
     "Module",
     "register_widget",
-    # fields -- text
     "String",
     "Text",
     "Html",
@@ -94,30 +75,23 @@ __all__ = [
     "Image",
     "Signature",
     "Uuid",
-    # fields -- numeric
     "Integer",
     "Json",
     "Float",
     "Monetary",
     "Duration",
-    # fields -- other scalars
     "Boolean",
     "Selection",
     "Color",
-    # fields -- temporal
     "Date",
     "Datetime",
     "Time",
-    # fields -- binary
     "Binary",
-    # fields -- geo
     "GeoPoint",
-    # fields -- relational
     "Many2one",
     "One2one",
     "One2many",
     "Many2many",
-    # components
     "Row",
     "Repeat",
     "Col",
@@ -136,20 +110,17 @@ __all__ = [
     "Search",
     "Filter",
     "Sort",
-    # actions
     "Delete",
     "Open",
     "Create",
     "Save",
     "Logic",
-    # context proxies + sentinel
     "OnDevice",
     "action",
     "record",
     "view",
     "item",
     "UNSET",
-    # errors worth catching
     "OneFrameworkError",
     "DslError",
     "SchemaError",

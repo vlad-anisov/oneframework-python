@@ -1,8 +1,4 @@
-"""Public names for the Component IR.
-
-``Row``/``List``/``Button``/``Search``/``Filter``/``Sort`` *are* IR nodes -- the
-DSL builds the IR directly, with no intermediate representation to keep in sync.
-"""
+"""Public names for the Component IR."""
 
 from __future__ import annotations
 
@@ -64,6 +60,4 @@ Search = SearchNode
 Filter = FilterNode
 Sort = SortNode
 Delete = DeleteAction
-#: Позвать логику, лежащую в базе модулем WASM. Имя действия -- всё, что вид
-#: о ней знает: на каком языке она написана, документ вида знать не должен.
 Logic = LogicAction

@@ -11,7 +11,6 @@ from oneframework.errors import OneFrameworkError
 from oneframework.modules import MODULES
 from oneframework.ui.view import View
 
-
 def write_module(root, name, body="", depends=None, extra=None):
     folder = root / name
     folder.mkdir(parents=True, exist_ok=True)
@@ -22,13 +21,11 @@ def write_module(root, name, body="", depends=None, extra=None):
         (folder / filename).write_text(textwrap.dedent(content))
     return folder
 
-
 @pytest.fixture(autouse=True)
 def clean_registry():
     MODULES.clear()
     yield
     MODULES.clear()
-
 
 def test_a_folder_with_init_is_a_module(tmp_path):
     write_module(tmp_path, "alpha")
@@ -39,25 +36,21 @@ def test_a_folder_with_init_is_a_module(tmp_path):
 
     assert discover(tmp_path) == ["alpha", "beta"]
 
-
 def test_missing_directory_is_a_clear_error(tmp_path):
     with pytest.raises(OneFrameworkError) as excinfo:
         discover(tmp_path / "nope")
     assert "not found" in str(excinfo.value)
-
 
 def test_modules_load_alphabetically(tmp_path):
     for name in ("gamma", "alpha", "beta"):
         write_module(tmp_path, name)
     assert [m.name for m in load_all(tmp_path)] == ["alpha", "beta", "gamma"]
 
-
 def test_depends_are_loaded_first(tmp_path):
     write_module(tmp_path, "zeta")
     write_module(tmp_path, "alpha", depends=["zeta"])
     order = [m.name for m in load_all(tmp_path)]
     assert order.index("zeta") < order.index("alpha")
-
 
 def test_missing_dependency_names_both_sides(tmp_path):
     write_module(tmp_path, "alpha", depends=["ghost"])
@@ -66,7 +59,6 @@ def test_missing_dependency_names_both_sides(tmp_path):
     message = str(excinfo.value)
     assert "alpha" in message and "ghost" in message
 
-
 def test_circular_dependency_is_detected(tmp_path):
     write_module(tmp_path, "alpha", depends=["beta"])
     write_module(tmp_path, "beta", depends=["alpha"])
@@ -74,19 +66,16 @@ def test_circular_dependency_is_detected(tmp_path):
         load_all(tmp_path)
     assert "Circular" in str(excinfo.value)
 
-
 def test_only_loads_a_subset(tmp_path):
     write_module(tmp_path, "alpha")
     write_module(tmp_path, "beta")
     assert [m.name for m in load_all(tmp_path, only=["beta"])] == ["beta"]
-
 
 def test_a_broken_module_names_itself(tmp_path):
     write_module(tmp_path, "alpha", body="raise ValueError('boom')")
     with pytest.raises(OneFrameworkError) as excinfo:
         load_all(tmp_path)
     assert "alpha" in str(excinfo.value) and "boom" in str(excinfo.value)
-
 
 def test_module_exposes_its_seed_and_static_files(tmp_path):
     write_module(
@@ -100,11 +89,9 @@ def test_module_exposes_its_seed_and_static_files(tmp_path):
     assert callable(module.seed)
     assert [p.name for p in module.static_files()] == ["widget.js"]
 
-
 def test_module_without_seed_reports_none(tmp_path):
     write_module(tmp_path, "alpha")
     assert load_all(tmp_path)[0].seed is None
-
 
 # ------------------------------------------------------------------- App
 def test_app_takes_its_root_from_a_module(tmp_path):
@@ -129,7 +116,6 @@ def test_app_takes_its_root_from_a_module(tmp_path):
     assert app.root_view.__name__ == "Home"
     assert [m.name for m in app.modules] == ["alpha"]
 
-
 def test_app_requires_at_least_one_screen(tmp_path):
     from oneframework import App
     from oneframework.errors import DslError
@@ -141,9 +127,7 @@ def test_app_requires_at_least_one_screen(tmp_path):
         App(modules=load_all(tmp_path))
     assert "SCREEN" in str(excinfo.value)
 
-
 def test_each_module_contributes_a_screen(tmp_path):
-    """Installing a module is what puts its section in the navigation."""
     from oneframework import App
 
     for name in ("alpha", "beta"):
@@ -155,7 +139,6 @@ def test_each_module_contributes_a_screen(tmp_path):
     app = App(modules=load_all(tmp_path))
     assert [s.key for s in app.screens] == ["Valpha", "Vbeta"]
     assert [s.label for s in app.screens] == ["Alpha", "Beta"]
-
 
 def test_module_screen_declares_label_and_icon(tmp_path):
     from oneframework import App
@@ -177,7 +160,6 @@ def test_module_screen_declares_label_and_icon(tmp_path):
         {"key": "Home", "label": "Главная", "icon": "house", "view": "Home",
          "master_detail": True}
     ]
-
 
 @нужно_ядро
 def test_each_module_seeds_independently(tmp_path):
@@ -202,16 +184,12 @@ def test_each_module_seeds_independently(tmp_path):
     )
     modules = load_all(tmp_path)
     app = App(modules=modules, title="Seeded")
-    #: Посев спрашивается у плана: он и решает, что поедет в базу. Что база
-    #: получает это ровно один раз -- проверяет `test_build_db.py`, там же, где
-    #: живёт сама запись.
     from conftest import план as построить
 
     план = построить(_пакетом(app))
     посеяно = [р for п in план["seeds"] for р in п["rows"].get("A", ())]
     assert len(посеяно) == 1
     assert посеяно[0]["name"] == "from alpha"
-
 
 @нужно_ядро
 def test_an_existing_install_does_not_reseed_after_a_marker_rename(tmp_path):
@@ -222,23 +200,12 @@ def test_an_existing_install_does_not_reseed_after_a_marker_rename(tmp_path):
     app = App(_Дом, title="Legacy")
     план = построить(_пакетом(app, lambda _db: None))
     посев = next(п for п in план["seeds"] if п["mark"].endswith(":app"))
-    #: План обязан назвать и прежние имена отметки. Смотрит на них сборщик, и
-    #: то, что он их принимает, проверено в `test_build_db.py`; здесь -- что он
-    #: их вообще получит.
+    #: План обязан назвать и прежние имена отметки.
     assert "seeded:legacy" in посев["also"], посев
-
 
 @нужно_ядро
 def test_logic_declared_as_a_compiled_module_refuses_by_name(tmp_path):
-    """Форма ``LOGIC = [{"module": ...}]`` объявлена, но не работает.
-
-    Хранение байтов модуля удалено вместе с рантаймом WASM, а вызов
-    и сама форма остались. Приложение, объявившее логику так, падало с
-    ``AttributeError`` -- то есть выглядело поломкой каркаса, а не отказом от
-    снятой возможности. Разницу видит только тот, кто полез в исходник.
-
-    Отказ обязан назвать и модуль, и дорогу, которая работает.
-    """
+    """Форма ``LOGIC = [{"module": ...}]`` объявлена, но не работает."""
     from oneframework import App
 
     write_module(tmp_path, "gone", '''
@@ -267,26 +234,12 @@ def test_logic_declared_as_a_compiled_module_refuses_by_name(tmp_path):
     with pytest.raises(ОтказЯдра, match="logic/tasks.wasm"):
         построить(_пакетом(app))
 
-
 def _пакетом(app, seed=None):
-    """Приложение -> пакет объявления: дорога в план теперь одна.
-
-    Своей проверки здесь нет -- что пакет несёт всё, стережёт
-    `test_plan_one_road.py`. Здесь только перевод.
-    """
+    """Приложение -> пакет объявления: дорога в план теперь одна."""
     from oneframework.declaration import Bundle, declare
 
     return Bundle(declare(app, seed))
 
-
 class _Дом(View):
-    """Корневой вид для проверок посева -- пустой, но настоящий.
-
-    На уровне модуля, а не внутри теста: виды приложение находит обходом своего
-    пакета, и объявленный в функции не находится. Раньше это сходило с рук --
-    план приложения без видов собирался молча; пакет объявления отказывает, и
-    правильно делает: на устройстве такое приложение показало бы пустой экран.
-    """
-
     def ui(self, record):
         return ()
