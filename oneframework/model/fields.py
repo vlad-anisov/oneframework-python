@@ -2,13 +2,8 @@
 
 from __future__ import annotations
 
-import datetime as _dt
-
-import json
-
 from ..errors import DslError, did_you_mean
 from .expr import Ref
-from .ids import new_id
 
 __all__ = [
     "Field", "register_widget",
@@ -34,7 +29,6 @@ class Field(Ref):
     #: widget used when the user writes ``text()`` with no override
     default_widget = "text"
     widgets = ("text",)
-    py_default = None
     #: does this field own a column? One2many/Many2many do not.
     stored = True
     #: kept by the framework, not by the app: ``id``, ``hlc``, ``created_at``,
@@ -136,19 +130,6 @@ class Field(Ref):
         return FieldNode(self, widget=widget, label=label, **options)
 
     # -- values ------------------------------------------------------------
-    def default(self):
-        if self._explicit_default is not None:
-            return self._explicit_default
-        return self.py_default
-
-    def to_db(self, value):
-        return value
-
-    def from_db(self, value):
-        return value
-
-    def to_json(self, value):
-        return value
 
     def __repr__(self):
         owner = getattr(self.owner, "__name__", None)
@@ -176,75 +157,27 @@ class String(Field):
         elif lines > 1:
             self.default_widget = "textarea"
 
-    def to_db(self, value):
-        return None if value is None else str(value)
-
 class Boolean(Field):
     ftype = "boolean"
-    py_default = False
-
-    def to_db(self, value):
-        return 1 if value else 0
-
-    def from_db(self, value):
-        return bool(value)
-
-    def to_json(self, value):
-        return bool(value)
 
 class Integer(Field):
     ftype = "integer"
-    py_default = 0
 
     def __init__(self, label=None, maximum=None, **kw):
         """``maximum`` bounds a score or a count -- what `Rating` used to be."""
         super().__init__(label=label, **kw)
         self.maximum = maximum
 
-    def to_db(self, value):
-        return 0 if value is None else int(value)
-
-    def from_db(self, value):
-        return 0 if value is None else int(value)
-
 class Color(Field):
     ftype = "color"
-
-    def to_db(self, value):
-        if value is None:
-            return None
-        value = str(value).strip()
-        if not value:
-            return None
-        return value
 
 class Datetime(Field):
     """ISO-8601 UTC timestamp, stored as TEXT so it sorts lexicographically."""
     ftype = "datetime"
 
-    @staticmethod
-    def now():
-        # Microsecond precision: millisecond stamps tie for records created in
-        # the same loop iteration, which makes "newest first" look arbitrary.
-        return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
-
-    def to_db(self, value):
-        if isinstance(value, _dt.datetime):
-            return value.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
-        return value
-
 class Date(Field):
     """Calendar date, stored as ISO ``YYYY-MM-DD``."""
     ftype = "date"
-
-    def to_db(self, value):
-        if isinstance(value, _dt.datetime):
-            return value.date().isoformat()
-        if isinstance(value, _dt.date):
-            return value.isoformat()
-        if value in (None, ""):
-            return None
-        return str(value)[:10]
 
 class Many2one(Field):
     """Reference to another :class:`~oneframework.model.meta.Model`."""
@@ -278,22 +211,10 @@ class Many2one(Field):
                 ) from None
         return self.comodel
 
-    def to_db(self, value):
-        if value is None:
-            return None
-        if isinstance(value, dict):
-            value = value.get("id")
-        elif hasattr(value, "id"):
-            value = value.id
-        if value is None or value == "":
-            return None
-        return str(value)
-
 # --- numeric -----------------------------------------------------------------
 class Float(Field):
     """Real number. ``digits`` is (precision, scale) as in Odoo."""
     ftype = "float"
-    py_default = 0.0
 
     def __init__(self, label=None, digits=(16, 2), unit=None, **kw):
         super().__init__(label=label, **kw)
@@ -302,26 +223,8 @@ class Float(Field):
         if unit:
             self.default_widget = "unit"
 
-    def to_db(self, value):
-        if value in (None, ""):
-            return 0.0
-        return round(float(value), self.digits[1] if self.digits else 6)
-
-    def from_db(self, value):
-        return 0.0 if value is None else float(value)
-
 class Monetary(Float):
     ftype = "monetary"
-
-    def to_db(self, value):
-        if value is None:
-            return None
-        return round(float(value) * (10 ** self.digits[1]))
-
-    def from_db(self, value):
-        if value is None:
-            return self.py_default
-        return int(value) / (10 ** self.digits[1])
 
     def __init__(self, label=None, currency="USD", **kw):
         super().__init__(label=label, **kw)
@@ -334,25 +237,8 @@ class Duration(Integer):
 class Uuid(String):
     ftype = "uuid"
 
-    def default(self):
-        value = super().default()
-        return value if value else new_id()
-
 class Json(Field):
     ftype = "json"
-
-    def to_db(self, value):
-        # ``sort_keys=True`` -- решение, а не украшение.
-        return None if value is None else json.dumps(value, ensure_ascii=False,
-                                                     sort_keys=True)
-
-    def from_db(self, value):
-        if value in (None, ""):
-            return None
-        try:
-            return json.loads(value)
-        except (TypeError, ValueError):
-            return None
 
 class Selection(Field):
     ftype = "selection"
@@ -368,19 +254,9 @@ class Selection(Field):
     def choices(self):
         return [{"value": v, "label": lbl} for v, lbl in self.selection]
 
-    def to_db(self, value):
-        return None if value in (None, "") else str(value)
-
 class Time(Field):
     """Clock time, stored as ISO ``HH:MM``."""
     ftype = "time"
-
-    def to_db(self, value):
-        if isinstance(value, _dt.time):
-            return value.strftime("%H:%M")
-        if isinstance(value, _dt.datetime):
-            return value.strftime("%H:%M")
-        return None if value in (None, "") else str(value)[:5]
 
 # --- binary ------------------------------------------------------------------
 class Binary(Field):
@@ -394,28 +270,9 @@ class Binary(Field):
         if accept and accept.startswith("image/"):
             self.default_widget = "image"
 
-    def to_db(self, value):
-        return None if value in (None, "") else str(value)
-
 class GeoPoint(Field):
     """A latitude/longitude pair, stored as ``"lat,lon"``."""
     ftype = "geopoint"
-
-    def to_db(self, value):
-        if value in (None, ""):
-            return None
-        if isinstance(value, (tuple, list)) and len(value) == 2:
-            return f"{float(value[0]):.6f},{float(value[1]):.6f}"
-        return str(value)
-
-    def from_db(self, value):
-        if not value:
-            return None
-        try:
-            lat, lon = str(value).split(",")
-            return [float(lat), float(lon)]
-        except (ValueError, TypeError):
-            return None
 
 class One2one(Many2one):
     ftype = "one2one"

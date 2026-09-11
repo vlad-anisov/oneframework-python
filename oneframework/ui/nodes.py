@@ -545,9 +545,6 @@ class FieldNode(Node):
         self.place = place
         self.options = options
 
-    @property
-    def field_name(self):
-        return self.field.ref_name
 
     def bind(self, model, origin):
         self.field = _bind_ref(self.field, model, origin)

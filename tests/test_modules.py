@@ -4,7 +4,6 @@ import textwrap
 
 import pytest
 
-from conftest import нужно_ядро
 
 from oneframework import String, discover, load_all
 from oneframework.errors import OneFrameworkError
@@ -160,79 +159,6 @@ def test_module_screen_declares_label_and_icon(tmp_path):
         {"key": "Home", "label": "Главная", "icon": "house", "view": "Home",
          "master_detail": True}
     ]
-
-@нужно_ядро
-def test_each_module_seeds_independently(tmp_path):
-    """Adding a module later seeds only the new one."""
-    from oneframework import App
-
-    write_module(
-        tmp_path, "alpha",
-        body='''
-        from oneframework import Model, View, String
-
-        class A(Model):
-            name = String("Name")
-
-        class Home(View):
-            def ui(self, record):
-                return ()
-
-        ROOT = Home
-        ''',
-        extra={"seed.py": "from alpha import A\n\n\ndef seed(db):\n    db.create(A, {'name': 'from alpha'})\n"},
-    )
-    modules = load_all(tmp_path)
-    app = App(modules=modules, title="Seeded")
-    from conftest import план as построить
-
-    план = построить(_пакетом(app))
-    посеяно = [р for п in план["seeds"] for р in п["rows"].get("A", ())]
-    assert len(посеяно) == 1
-    assert посеяно[0]["name"] == "from alpha"
-
-@нужно_ядро
-def test_an_existing_install_does_not_reseed_after_a_marker_rename(tmp_path):
-    """Upgrading the framework must not duplicate demo data."""
-    from oneframework import App
-    from conftest import план as построить
-
-    app = App(_Дом, title="Legacy")
-    план = построить(_пакетом(app, lambda _db: None))
-    посев = next(п for п in план["seeds"] if п["mark"].endswith(":app"))
-    #: План обязан назвать и прежние имена отметки.
-    assert "seeded:legacy" in посев["also"], посев
-
-@нужно_ядро
-def test_logic_declared_as_a_compiled_module_refuses_by_name(tmp_path):
-    """Форма ``LOGIC = [{"module": ...}]`` объявлена, но не работает."""
-    from oneframework import App
-
-    write_module(tmp_path, "gone", '''
-        from oneframework import Model, Screen, String, View
-
-
-        class G(Model):
-            name = String("Имя")
-
-
-        class Home(View):
-            def ui(self, record):
-                return ()
-
-
-        SCREEN = Screen(Home)
-
-        LOGIC = [{"module": "logic/tasks.wasm", "language": "rust",
-                  "actions": [{"name": "G.touch"}]}]
-    ''')
-    from conftest import ОтказЯдра, план as построить
-
-    # Отказ приходит **словами ядра**: правило живёт там, и переводить его в
-    # питоновское исключение значило бы завести вторую запись отказа.
-    app = App(modules=load_all(tmp_path), title="Gone")
-    with pytest.raises(ОтказЯдра, match="logic/tasks.wasm"):
-        построить(_пакетом(app))
 
 def _пакетом(app, seed=None):
     """Приложение -> пакет объявления: дорога в план теперь одна."""

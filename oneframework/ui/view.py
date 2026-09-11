@@ -179,9 +179,3 @@ class View(metaclass=ViewMeta):
     _state_fields: dict[str, Field] = {}
     _ui_fn = None
 
-    @classmethod
-    def state_defaults(cls):
-        """Initial transient state. Unset state is :data:`UNSET`, not ``None``."""
-        from ..model.expr import UNSET
-
-        return {name: UNSET for name in cls._state_fields}

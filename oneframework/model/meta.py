@@ -142,10 +142,6 @@ class Model(metaclass=ModelMeta):
     def stored_fields(cls):
         return [f for n, f in cls._fields.items() if n != "id" and f.stored]
 
-    @classmethod
-    def virtual_fields(cls):
-        """Fields backed by a query rather than a column (One2many/Many2many)."""
-        return [f for f in cls._fields.values() if not f.stored]
 
     @classmethod
     def display_field(cls):
@@ -162,9 +158,3 @@ class Model(metaclass=ModelMeta):
 
     #: ``Model.all()`` и ``Model.get()`` читали через живой питоновский
     #: рантайм.
-    @classmethod
-    def display_name(cls, row: dict) -> str:
-        df = cls.display_field()
-        if df is None:
-            return f"{cls.__name__} #{row.get('id')}"
-        return row.get(df.name) or f"#{row.get('id')}"

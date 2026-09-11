@@ -134,10 +134,6 @@ class App:
 
     #: ``attach_logic()`` поднимал питоновский хост логики.
 
-    def _seeded_before(self, db, name):
-        if name != "app":
-            return False
-        return bool(db.get_meta(f"seeded:{_slug(self.title)}") or db.get_meta("seeded"))
 
     def _seeds(self, explicit=None):
         """``(name, fn)`` for every seed to consider, modules first."""

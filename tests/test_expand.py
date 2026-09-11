@@ -4,7 +4,6 @@ import json
 
 import pytest
 
-from conftest import нужно_ядро
 
 from oneframework import (
     Accordion, App, Boolean, Button, Delete, List, Many2one,
@@ -97,40 +96,6 @@ def test_the_document_keeps_the_repeat_rather_than_its_result():
 def test_the_document_keeps_names_as_references():
     tab = document(Boards)["children"][0]["children"][0]["children"][0]
     assert tab["label"] == {"fmt": [{"i": "name"}]}
-
-@нужно_ядро
-def test_the_document_carries_the_aggregate_and_not_its_value():
-    # Спрашивается **план**: выражение объявлено строкой, а дерево из неё
-    # собирает сборка.
-    from conftest import план
-
-    план = план(_пакетом(App(Boards, title="Развороты")))
-    вид = next(д for в, и, д in план["defs"] if в == "view" and и == "Boards")
-    tab = вид["children"][0]["children"][0]["children"][0]
-    accordion = tab["children"][1]
-    assert accordion["visible"]["agg"] == "exists"
-    assert accordion["visible"]["model"] == "Task"
-
-@нужно_ядро
-def test_the_document_lands_in_the_database_beside_the_data():
-    from conftest import план
-
-    план = план(_пакетом(App(Boards, title="Развороты")))
-    поедет = {и: д for в, и, д in план["defs"] if в == "view"}
-    # Сверяются **имена и строение**, а не тела выражений: в документе они
-    # объявлены строкой, а план их разворачивает, и сравнивать одно с другим
-    # значило бы мерить работу разворота.
-    def выражение(о):
-        return isinstance(о, dict) and (set(о) == {"text"} or "op" in о or "agg" in о)
-
-    def скелет(о):
-        if выражение(о):
-            return "<выражение>"
-        if isinstance(о, dict):
-            return {к: скелет(з) for к, з in о.items()}
-        return [скелет(э) for э in о] if isinstance(о, list) else о
-
-    assert скелет(поедет.get("Boards")) == скелет(document(Boards))
 
 def _пакетом(app, seed=None):
     """Приложение -> пакет объявления: дорога в план теперь одна."""

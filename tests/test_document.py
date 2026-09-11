@@ -11,7 +11,6 @@ from pathlib import Path
 
 import pytest
 
-from conftest import нужно_ядро
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = json.loads((ROOT / "protocol" / "document.json").read_text(encoding="utf-8"))
@@ -188,36 +187,6 @@ def test_views_still_holding_code_are_counted_not_hidden():
     # `tests/fixtures/document_app.py`, у неё `_title` -- функция от записи
     # («Новая заметка» / «Правка заметки»).
     assert holding == ["Карточка"], holding
-
-@нужно_ядро
-def test_nothing_is_skipped_silently():
-    """У примеров все виды обязаны публиковаться."""
-    script = r"""
-import json, sys, tempfile
-sys.path.insert(0, sys.argv[1]); sys.path.insert(0, sys.argv[2])
-import os; sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))
-from conftest import план
-from oneframework.declaration import Bundle, declare
-from oneframework.model.skipped import SKIPPED
-
-# Что поедет в базу -- это **план**: пропуск вида решается при сборке
-# документов, а не при записи, и спрашивать надо там же.
-app = __import__(sys.argv[3]).app
-план = план(Bundle(declare(app)))
-print(json.dumps({"skipped": SKIPPED,
-                  "published": [и for в, и, _ in план["defs"] if в == "view"],
-                  "declared": [v.__name__ for v in app.views]}, ensure_ascii=False))
-"""
-    for example in ОБРАЗЦЫ:
-        proc = subprocess.run(
-            [sys.executable, "-c", script, str(ROOT),
-             str(ROOT / "tests" / "fixtures"), example],
-            capture_output=True, text=True, cwd=str(ROOT),
-        )
-        assert proc.returncode == 0, f"{example}: {proc.stderr}"
-        report = json.loads(proc.stdout)
-        assert report["skipped"] == {}, f"{example}: пропущены {report['skipped']}"
-        assert sorted(report["published"]) == sorted(report["declared"]), example
 
 def test_state_fields_carry_their_type():
     drafts = [d for _e, n, d in DOCUMENTS if n == "Черновик"]

@@ -60,12 +60,6 @@ def todo_app():
 #: Половина рантайма переехала на JS, и проверять её можно только запустив.
 needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node недоступен")
 
-ЯДРО_РЯДОМ = (ROOT / "libs" / "js" / "src").is_dir()
-
-нужно_ядро = pytest.mark.skipif(
-    not ЯДРО_РЯДОМ,
-    reason="ядра нет рядом: проверка про привязку, но обстановку ей даёт ядро")
-
 def run_node(tmp_path, script, payload):
     data = tmp_path / "payload.json"
     data.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")

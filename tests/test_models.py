@@ -21,8 +21,9 @@ def test_auto_fields_are_added_without_being_declared():
         assert auto in Item._fields, auto
     assert Item._fields["created_at"].ftype == "datetime"
     # The key is what makes a record referable across devices; two calls to its
-    # default must never agree.
-    make = Item._fields["id"].default
+    # generator must never agree. Keys are made by `new_id` -- the seed's own
+    # generator; the field's runtime-era `default()` is gone with the runtime.
+    from oneframework.model.ids import new_id as make
     assert make() != make()
     # ...and it still sorts by the moment it was made, so `ORDER BY id` keeps
     # meaning "in the order they were added" now that the counter is gone.
@@ -41,10 +42,6 @@ def test_table_name_is_snake_cased():
         name = String()
 
     assert TodoLineThing._table == "todo_line_thing"
-
-def test_boolean_defaults_to_false_without_an_explicit_default():
-    assert Item._fields["done"].default() is False
-    assert Item._fields["position"].default() == 0
 
 def test_many2one_uses_an_id_column_and_resolves_its_comodel():
     field = Item._fields["category"]
